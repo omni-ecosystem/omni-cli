@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # Source dependencies (BASE_DIR is passed from index.sh)
-source "$BASE_DIR/styles/colors.sh"
-source "$BASE_DIR/modules/ui/menu.sh"
+source "$ECOSYSTEM/omni-ui-kit/index.sh"
 source "$BASE_DIR/modules/config/json.sh"
 
 config_dir=$(get_config_directory)

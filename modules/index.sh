@@ -14,7 +14,6 @@ MODULES_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "$MODULES_DIR/config/index.sh"     # Configuration and JSON parsing
 source "$MODULES_DIR/tmux/index.sh"       # Tmux session management
 source "$MODULES_DIR/ui/table.sh"         # Shared table UI components
-source "$MODULES_DIR/ui/menu.sh"          # Shared menu UI components
 source "$ECOSYSTEM/omni-navigator/index.sh" # Filesystem navigation
 source "$MODULES_DIR/docs.sh"             # Help documentation screens
 source "$MODULES_DIR/menu/index.sh"       # Interactive menu system

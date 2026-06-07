@@ -12,6 +12,7 @@ else
     export IS_INSTALLED=false
     export BASE_DIR="$(dirname "${BASH_SOURCE[0]}")"
 fi
+export ECOSYSTEM="$HOME/.omni-ecosystem"
 
 # Load .env early to get project variables
 if [ -f "$BASE_DIR/.env" ]; then
@@ -69,9 +70,26 @@ setup_config_paths() {
     export JSON_CONFIG_FILE
 }
 
+check_ecosystem_deps() {
+    local pkgs=(
+        "omni-ui-kit|https://raw.githubusercontent.com/nickojs/omni-ui-kit/main/install.sh"
+        "omni-navigator|https://raw.githubusercontent.com/omni-ecosystem/omni-navigator/refs/heads/main/install.sh"
+        "omni-secrets|https://raw.githubusercontent.com/omni-ecosystem/omni-secrets/refs/heads/main/install.sh"
+    )
+    for entry in "${pkgs[@]}"; do
+        local pkg="${entry%%|*}"
+        local url="${entry##*|}"
+        if [ ! -d "$ECOSYSTEM/$pkg" ]; then
+            echo "Installing missing dependency: $pkg..."
+            curl -fsSL "$url" | bash
+        fi
+    done
+}
+
 # Import all modules after setting up paths
 setup_config_paths
-source "$BASE_DIR/styles/index.sh"
+check_ecosystem_deps
+source "$ECOSYSTEM/omni-ui-kit/index.sh"
 source "$BASE_DIR/modules/index.sh"
 
 main() {

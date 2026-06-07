@@ -302,3 +302,64 @@ select_project_from_workspace() {
     echo $((project_choice - 1))
     return 0
 }
+
+# ========================================
+# Secrets Data Directory
+# ========================================
+# Where omni-secrets stores its .secrets.json/.vaults.json. Persisted as a
+# plain path string, same pattern as the terminal config (settings/commands.sh).
+
+readonly SECRETS_DATA_DIR_FILE=".secrets-data-dir"
+
+# Function to get the configured secrets data directory
+# Falls back to get_config_directory() (today's behavior) if unset
+# Returns: absolute path via echo
+get_secrets_data_dir() {
+    local config_dir=$(get_config_directory)
+    local data_dir_file="$config_dir/$SECRETS_DATA_DIR_FILE"
+
+    if [[ -s "$data_dir_file" ]]; then
+        cat "$data_dir_file"
+    else
+        echo "$config_dir"
+    fi
+}
+
+# Function to set the secrets data directory
+# Creates the directory if needed and persists the path
+# Parameters: new_dir
+# Returns: 0 if successful, 1 if the directory could not be created
+set_secrets_data_dir() {
+    local new_dir="$1"
+
+    [ -n "$new_dir" ] || return 1
+    mkdir -p "$new_dir" || return 1
+
+    local config_dir=$(get_config_directory)
+    printf '%s' "$new_dir" > "$config_dir/$SECRETS_DATA_DIR_FILE"
+}
+
+# Function to lazily source omni-secrets on first use
+# Guards against re-sourcing within the same process
+# Returns: 0 if loaded (now or previously), 1 on failure
+ensure_secrets_loaded() {
+    if [ "$_OMNI_SECRETS_LOADED" = true ]; then
+        return 0
+    fi
+
+    local data_dir=$(get_secrets_data_dir)
+    mkdir -p "$data_dir" || return 1
+
+    source "$ECOSYSTEM/omni-secrets/index.sh" --data-dir="$data_dir" || return 1
+    _OMNI_SECRETS_LOADED=true
+}
+
+# Host callback for omni-secrets' "change dir" screen (Secrets & Vaults menu).
+# omni-secrets only knows how to read OMNI_SECRETS_DATA_DIR - it has no concept
+# of how the host persists config, so it calls this hook (by name, if defined)
+# with the chosen path and leaves persistence to us.
+# Parameters: new_dir
+on_omni_secrets_data_dir_change() {
+    local new_dir="$1"
+    set_secrets_data_dir "$new_dir"
+}

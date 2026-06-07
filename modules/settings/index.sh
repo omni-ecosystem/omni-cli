@@ -16,7 +16,6 @@ source "$SETTINGS_DIR/ui_helpers.sh"     # UI interaction helpers
 source "$SETTINGS_DIR/state.sh"          # Workspace state management
 source "$SETTINGS_DIR/workspaces/index.sh" # Workspace management operations
 source "$SETTINGS_DIR/projects/index.sh" # Project management operations
-source "$ECOSYSTEM/omni-secrets/index.sh" --data-dir="$(get_config_directory)" # Secrets management
 source "$SETTINGS_DIR/display.sh"        # Settings menu display
 source "$SETTINGS_DIR/commands.sh"       # Settings command handling
 

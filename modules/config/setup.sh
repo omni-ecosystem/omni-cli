@@ -49,6 +49,23 @@ show_first_time_welcome() {
     echo "  ${BRIGHT_WHITE}4.${NC} Add projects to your workspace"
     echo "  ${BRIGHT_WHITE}5.${NC} Start managing your projects!"
     echo ""
+    print_color "$BRIGHT_CYAN" "Secrets Storage:"
+    print_info "omni-secrets keeps your encrypted keys and passphrases on disk."
+    local default_secrets_dir=$(get_config_directory)
+    print_info "Browse to a folder and press space to use it, or press 'b' to keep the default (${default_secrets_dir})."
+    echo ""
+    print_color "$BRIGHT_YELLOW" "Press Enter to open the directory browser..."
+    read -r
+    show_interactive_browser "directory" "$HOME" "/home" "Select: Secrets Storage Directory"
+    if [ -n "$SELECTED_PROJECTS_DIR" ]; then
+        if set_secrets_data_dir "$SELECTED_PROJECTS_DIR"; then
+            print_success "Secrets will be stored at: $SELECTED_PROJECTS_DIR"
+        else
+            print_error "Could not use that directory; using the default instead"
+        fi
+        unset SELECTED_PROJECTS_DIR
+    fi
+    echo ""
     print_color "$BRIGHT_YELLOW" "Press Enter to continue to the main menu..."
     read -r
 

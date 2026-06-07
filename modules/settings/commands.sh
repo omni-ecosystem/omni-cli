@@ -47,7 +47,12 @@ handle_settings_choice() {
 
     # Handle secrets command - always available
     if [[ $choice =~ ^[Ss]$ ]]; then
-        show_secrets_menu
+        if ensure_secrets_loaded; then
+            show_secrets_menu
+        else
+            print_error "Failed to load secrets module"
+            wait_for_enter
+        fi
         return 0
     fi
 

@@ -6,16 +6,6 @@
 # Provides reusable table rendering for workspace/project displays
 # Usage: source modules/ui/table.sh
 
-# Format workspace filename into display name (title case)
-# Parameters:
-#   $1 - workspace_file path
-# Returns: formatted display name via echo
-format_workspace_display_name() {
-    local workspace_file="$1"
-    local workspace_name=$(basename "$workspace_file" .json)
-    echo "$workspace_name" | sed 's/[_-]/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1'
-}
-
 # Format workspace display name using nameref (no subshell)
 # Parameters:
 #   $1 - workspace_file path
@@ -110,33 +100,6 @@ get_project_vaults_ref() {
     local relative_path="$2"
     local -n _vaults=$3
     _vaults="${_vault_cache["${workspace_file}:${relative_path}"]:-}"
-}
-
-# Truncate value to max length with ellipsis
-# Parameters:
-#   $1 - value
-#   $2 - max length
-# Returns: truncated value via echo
-truncate_value() {
-    local value="$1"
-    local max_len="$2"
-
-    if [ ${#value} -gt "$max_len" ]; then
-        printf "%.${max_len}s..." "${value:0:$((max_len - 3))}"
-    else
-        echo "$value"
-    fi
-}
-
-# Format column with fixed width
-# Parameters:
-#   $1 - value
-#   $2 - width
-# Returns: formatted value via echo
-format_column() {
-    local value="$1"
-    local width="$2"
-    printf "%-${width}s" "$value"
 }
 
 # Render workspace header
@@ -268,20 +231,6 @@ get_project_status() {
     fi
 
     echo "${status_text}|${status_color}"
-}
-
-# Get workspace active status
-# Parameters:
-#   $1 - workspace_file path
-# Returns via echo: "icon|text"
-get_workspace_status() {
-    local workspace_file="$1"
-
-    if is_workspace_active "$workspace_file"; then
-        echo "${BRIGHT_GREEN}●${NC}|${DIM}active${NC}"
-    else
-        echo "${DIM}○${NC}|${DIM}inactive${NC}"
-    fi
 }
 
 # Get workspace status using nameref (no subshell)

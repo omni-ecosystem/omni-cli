@@ -103,7 +103,8 @@ display_workspaces() {
     local global_counter=1
 
     for workspace_file in "${workspace_files[@]}"; do
-        local display_name=$(format_workspace_display_name "$workspace_file")
+        local display_name
+        format_workspace_display_name_ref "$workspace_file" display_name
 
         # Find projects belonging to this workspace
         local workspace_project_indices=()

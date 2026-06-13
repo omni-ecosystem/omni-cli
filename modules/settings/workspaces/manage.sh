@@ -11,7 +11,8 @@
 manage_workspace() {
     local workspace_file="$1"
     local restricted_mode="${2:-false}"
-    local display_name=$(format_workspace_display_name "$workspace_file")
+    local display_name
+    format_workspace_display_name_ref "$workspace_file" display_name
 
     while true; do
         # Get projects root for this workspace
@@ -76,7 +77,7 @@ manage_workspace() {
             rename_workspace "$workspace_file" "$display_name"
             if [ -n "$RENAMED_WORKSPACE_FILE" ] && [ -f "$RENAMED_WORKSPACE_FILE" ]; then
                 workspace_file="$RENAMED_WORKSPACE_FILE"
-                display_name=$(format_workspace_display_name "$workspace_file")
+                format_workspace_display_name_ref "$workspace_file" display_name
             fi
             continue
         fi

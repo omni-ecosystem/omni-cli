@@ -31,7 +31,8 @@ workspace_has_running_projects() {
 toggle_workspace() {
     local workspace_file="$1"
     local restricted_mode="${2:-false}"
-    local display_name=$(format_workspace_display_name "$workspace_file")
+    local display_name
+    format_workspace_display_name_ref "$workspace_file" display_name
 
     # Check current state
     if is_workspace_active "$workspace_file"; then

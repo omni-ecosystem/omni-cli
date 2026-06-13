@@ -116,24 +116,6 @@ is_workspace_active() {
     return 1
 }
 
-# Function to get the first active workspace
-# Returns: workspace file path via echo, or empty if none active
-get_primary_active_workspace() {
-    if ! ensure_workspaces_file; then
-        return 1
-    fi
-
-    local workspaces_file=$(get_workspaces_file_path)
-
-    if ! command -v jq >/dev/null 2>&1; then
-        return 1
-    fi
-
-    local primary=$(jq -r '.activeConfig[0]? // empty' "$workspaces_file" 2>/dev/null)
-    echo "$primary"
-    [ -n "$primary" ] && return 0 || return 1
-}
-
 # Function to add workspace to active configuration
 # Parameters: workspace_file_path, [projects_folder_path]
 # Returns: 0 if successful, 1 if error
@@ -285,82 +267,4 @@ get_workspace_projects_folder() {
     fi
 
     return 1
-}
-
-# Function to validate workspace state
-# Returns: 0 if valid, 1 if issues found (prints issues to stderr)
-validate_workspace_state() {
-    if ! ensure_workspaces_file; then
-        echo "Error: Cannot access workspaces file" >&2
-        return 1
-    fi
-
-    local workspaces_file=$(get_workspaces_file_path)
-    local has_issues=0
-
-    # Get active workspaces
-    local active_workspaces=()
-    get_active_workspaces active_workspaces
-
-    # Check if active workspace files exist
-    for workspace in "${active_workspaces[@]}"; do
-        if [ ! -f "$workspace" ]; then
-            echo "Warning: Active workspace file not found: $workspace" >&2
-            has_issues=1
-        fi
-    done
-
-    # Get available workspaces
-    local available_workspaces=()
-    get_available_workspaces available_workspaces
-
-    # Check if available workspace files exist
-    for workspace in "${available_workspaces[@]}"; do
-        if [ ! -f "$workspace" ]; then
-            echo "Warning: Available workspace file not found: $workspace" >&2
-            has_issues=1
-        fi
-    done
-
-    return $has_issues
-}
-
-# Function to clean orphaned workspace entries
-# Returns: 0 if successful, 1 if error
-clean_orphaned_workspaces() {
-    if ! ensure_workspaces_file; then
-        return 1
-    fi
-
-    if ! command -v jq >/dev/null 2>&1; then
-        return 1
-    fi
-
-    local workspaces_file=$(get_workspaces_file_path)
-
-    # Build arrays of existing workspace files
-    local active_workspaces=()
-    get_active_workspaces active_workspaces
-
-    local valid_active=()
-    for workspace in "${active_workspaces[@]}"; do
-        [ -f "$workspace" ] && valid_active+=("$workspace")
-    done
-
-    local available_workspaces=()
-    get_available_workspaces available_workspaces
-
-    local valid_available=()
-    for workspace in "${available_workspaces[@]}"; do
-        [ -f "$workspace" ] && valid_available+=("$workspace")
-    done
-
-    # Rebuild the workspaces file with only valid entries
-    local active_json=$(printf '%s\n' "${valid_active[@]}" | jq -R . | jq -s .)
-    local available_json=$(printf '%s\n' "${valid_available[@]}" | jq -R . | jq -s .)
-
-    json_update_file "$workspaces_file" \
-        '.activeConfig = $active | .availableConfigs = $available' \
-        --argjson active "$active_json" \
-        --argjson available "$available_json"
 }

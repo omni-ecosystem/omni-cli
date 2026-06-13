@@ -11,7 +11,8 @@
 # Returns: 0 if successful, 1 if error or cancelled
 delete_workspace() {
     local workspace_file="$1"
-    local display_name=$(format_workspace_display_name "$workspace_file")
+    local display_name
+    format_workspace_display_name_ref "$workspace_file" display_name
 
     # Show warning
     show_delete_workspace_warning "$display_name" "$workspace_file"

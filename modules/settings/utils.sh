@@ -58,64 +58,6 @@ json_update_file() {
     return 1
 }
 
-# Function to get projects root for a specific workspace
-# Parameters: workspace_file_path
-# Returns: projects root directory via echo, empty if error
-get_workspace_projects_root() {
-    local workspace_file="$1"
-
-    # Get config directory
-    local config_dir=$(get_config_directory)
-
-    local workspaces_file="$config_dir/.workspaces.json"
-
-    # First, try to get from workspaces config workspacePaths mapping
-    if [ -f "$workspaces_file" ] && command -v jq >/dev/null 2>&1; then
-        local workspace_path=$(jq -r --arg workspace_file "$workspace_file" \
-            '.workspacePaths[$workspace_file] // empty' "$workspaces_file" 2>/dev/null)
-
-        if [ -n "$workspace_path" ] && [ "$workspace_path" != "null" ]; then
-            echo "$workspace_path"
-            return 0
-        fi
-    fi
-
-    # Fallback: try to extract from first project in workspace file
-    if [ -f "$workspace_file" ] && command -v jq >/dev/null 2>&1; then
-        local project_count=$(jq 'length' "$workspace_file" 2>/dev/null)
-
-        if [ -n "$project_count" ] && [ "$project_count" -gt 0 ]; then
-            local first_relative_path=$(jq -r ".[0].relativePath" "$workspace_file" 2>/dev/null)
-            if [ -n "$first_relative_path" ] && [ "$first_relative_path" != "null" ]; then
-                local projects_root=$(dirname "$first_relative_path")
-                echo "$projects_root"
-                return 0
-            fi
-        fi
-    fi
-
-    return 1
-}
-
-# Function to check if a folder is already managed
-# Parameters: folder_name, projects_root_path
-# Returns: 0 if managed, 1 if not managed
-is_folder_managed() {
-    local folder_name="$1"
-    local projects_root="$2"
-
-    if ! validate_json_config; then
-        return 1
-    fi
-
-    # Check if any project has this folder as projectName
-    local managed_count=$(jq --arg folder "$folder_name" \
-        '[.[] | select(.projectName == $folder)] | length' \
-        "$JSON_CONFIG_FILE")
-
-    [ "$managed_count" -gt 0 ]
-}
-
 # Function to append new project to JSON config
 # Parameters: display_name, folder_name, projects_root, startup_cmd, shutdown_cmd
 # Returns: 0 if successful, 1 if error
@@ -215,22 +157,6 @@ assign_vault_to_project() {
         rm -f "$temp_file"
         return 1
     fi
-}
-
-# Function to get assigned vaults for a project
-# Parameters: workspace_file, project_path
-# Returns: array of vault names via echo (one per line)
-get_project_assigned_vaults() {
-    local workspace_file="$1"
-    local project_path="$2"
-
-    if [ ! -f "$workspace_file" ]; then
-        return 1
-    fi
-
-    jq -r --arg path "$project_path" \
-        '.[] | select(.relativePath == $path) | .assignedVaults[]? // empty' \
-        "$workspace_file" 2>/dev/null
 }
 
 # Function to validate numeric input is within range

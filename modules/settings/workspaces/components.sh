@@ -142,7 +142,8 @@ display_workspace_list() {
     for workspace_basename in "${workspaces_list[@]}"; do
         # Construct full path from config_dir and basename
         local workspace_file="$config_dir/$workspace_basename"
-        local display_name=$(format_workspace_display_name "$workspace_file")
+        local display_name
+        format_workspace_display_name_ref "$workspace_file" display_name
 
         # Count projects
         local workspace_projects=()

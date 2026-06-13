@@ -11,6 +11,7 @@
 MODULES_DIR="$(dirname "${BASH_SOURCE[0]}")"
 
 # Import all modules in dependency order
+source "$BASE_DIR/libs/omni-ui-kit/index.sh"     # UI components and input helpers
 source "$MODULES_DIR/config/index.sh"     # Configuration and JSON parsing
 source "$MODULES_DIR/tmux/index.sh"       # Tmux session management
 source "$MODULES_DIR/ui/table.sh"         # Shared table UI components

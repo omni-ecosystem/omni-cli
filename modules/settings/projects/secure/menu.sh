@@ -31,7 +31,7 @@ select_vault_screen() {
     # Check if any vaults are mounted
     local has_mounted=false
     for vault_info in "${vaults[@]}"; do
-        IFS=':' read -r name _ mount_point _ <<< "$vault_info"
+        IFS=':' read -r name _ _ mount_point _ <<< "$vault_info"
         if get_vault_status "$mount_point"; then
             has_mounted=true
             break
@@ -52,7 +52,7 @@ select_vault_screen() {
     # Determines display mode: filter+both-ops vs show-all+add-only.
     local has_any_files=false
     for vault_info in "${vaults[@]}"; do
-        IFS=':' read -r _ _ mount_point _ <<< "$vault_info"
+        IFS=':' read -r _ _ _ mount_point _ <<< "$vault_info"
         if get_vault_status "$mount_point"; then
             local vpc="${mount_point}/${project_name}"
             if [ -d "$vpc" ] && [ -n "$(find "$vpc" -type f 2>/dev/null | head -1)" ]; then
@@ -73,7 +73,7 @@ select_vault_screen() {
         local -a mounted_indices=()
         for i in "${!vaults[@]}"; do
             local vault_info="${vaults[$i]}"
-            IFS=':' read -r name _ mount_point _ <<< "$vault_info"
+            IFS=':' read -r name _ _ mount_point _ <<< "$vault_info"
 
             if get_vault_status "$mount_point"; then
                 local vault_project_dir="${mount_point}/${project_name}"
@@ -131,7 +131,7 @@ select_vault_screen() {
             if [ "$vault_num" -ge 1 ] && [ "$vault_num" -le "$vault_count" ]; then
                 local selected_idx="${mounted_indices[$((vault_num - 1))]}"
                 local vault_info="${vaults[$selected_idx]}"
-                IFS=':' read -r SELECTED_VAULT_NAME _ SELECTED_VAULT_MOUNT _ <<< "$vault_info"
+                IFS=':' read -r SELECTED_VAULT_NAME _ _ SELECTED_VAULT_MOUNT _ <<< "$vault_info"
                 return 10  # Return code for "add"
             fi
         fi
@@ -142,7 +142,7 @@ select_vault_screen() {
             if [ "$vault_num" -ge 1 ] && [ "$vault_num" -le "$vault_count" ]; then
                 local selected_idx="${mounted_indices[$((vault_num - 1))]}"
                 local vault_info="${vaults[$selected_idx]}"
-                IFS=':' read -r SELECTED_VAULT_NAME _ SELECTED_VAULT_MOUNT _ <<< "$vault_info"
+                IFS=':' read -r SELECTED_VAULT_NAME _ _ SELECTED_VAULT_MOUNT _ <<< "$vault_info"
                 return 20  # Return code for "move"
             fi
         fi

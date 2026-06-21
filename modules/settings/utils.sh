@@ -159,6 +159,28 @@ assign_vault_to_project() {
     fi
 }
 
+# Remove a vault name from assignedVaults in all workspace JSON files
+# Parameters: vault_name
+# Returns: 0 always
+remove_vault_from_all_workspaces() {
+    local vault_name="$1"
+    local config_dir
+    config_dir=$(get_config_directory)
+
+    for workspace_file in "$config_dir"/*.json; do
+        [ -f "$workspace_file" ] || continue
+        local temp_file
+        temp_file=$(mktemp)
+        if jq --arg vault "$vault_name" \
+              'map(.assignedVaults = ((.assignedVaults // []) | map(select(. != $vault))))' \
+              "$workspace_file" > "$temp_file" 2>/dev/null; then
+            mv "$temp_file" "$workspace_file"
+        else
+            rm -f "$temp_file"
+        fi
+    done
+}
+
 # Function to validate numeric input is within range
 # Parameters: input, min, max, item_name (optional)
 # Returns: 0 if valid, 1 if invalid

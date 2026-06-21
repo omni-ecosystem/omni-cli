@@ -77,10 +77,20 @@ get_project_vaults() {
     fi
 }
 
-# Vault cache for batch loading
+# Vault assignments keyed by project folder (relativePath). A vault belongs to
+# a physical folder, not a workspace+folder pair, so folders shared across
+# workspaces resolve to the same assignment. Reset + populate via the loop in
+# display_workspaces_info before rendering.
 declare -gA _vault_cache=()
 
-# Load all vaults for a workspace into cache (single jq call)
+# Reset the vault cache — call once before a fresh render pass
+reset_vault_cache() {
+    _vault_cache=()
+}
+
+# Merge a workspace's vault assignments into the cache (single jq call).
+# Only non-empty assignments are stored, so a workspace where the shared folder
+# has no vault won't clobber another workspace that does.
 # Parameters: $1 - workspace_file path
 load_workspace_vaults() {
     local workspace_file="$1"
@@ -88,18 +98,17 @@ load_workspace_vaults() {
     if [ -f "$workspace_file" ] && command -v jq >/dev/null 2>&1; then
         local project_path vaults
         while IFS=$'\t' read -r project_path vaults; do
-            [[ -n "$project_path" ]] && _vault_cache["${workspace_file}:${project_path}"]="$vaults"
+            [[ -n "$project_path" && -n "$vaults" ]] && _vault_cache["$project_path"]="$vaults"
         done < <(jq -r '.[] | [.relativePath, (.assignedVaults // [] | join(","))] | @tsv' "$workspace_file" 2>/dev/null)
     fi
 }
 
 # Get vaults from cache using nameref (no subshell)
-# Parameters: $1 - workspace_file, $2 - relative_path, $3 - nameref for result
+# Parameters: $1 - relative_path, $2 - nameref for result
 get_project_vaults_ref() {
-    local workspace_file="$1"
-    local relative_path="$2"
-    local -n _vaults=$3
-    _vaults="${_vault_cache["${workspace_file}:${relative_path}"]:-}"
+    local relative_path="$1"
+    local -n _vaults=$2
+    _vaults="${_vault_cache["$relative_path"]:-}"
 }
 
 # Render workspace header

@@ -30,6 +30,18 @@ show_secure_files_flow() {
     local project_path="$3"
     local project_name=$(basename "$project_path")
 
+    # omni-secrets is sourced lazily; ensure it's loaded so load_vaults and
+    # get_vault_status are available even if the Secrets menu wasn't visited yet
+    if ! ensure_secrets_loaded; then
+        clear
+        print_header "SECURE FILES"
+        echo ""
+        print_error "Failed to load secrets module"
+        echo ""
+        wait_for_enter
+        return 1
+    fi
+
     while true; do
         # Step 1: Select vault and operation
         select_vault_screen "$workspace_file" "$project_path"

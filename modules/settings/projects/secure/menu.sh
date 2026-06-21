@@ -71,8 +71,28 @@ select_vault_screen() {
                     fi
                 done
 
-                echo -e "  ${BRIGHT_CYAN}${counter}${NC}  ${BRIGHT_GREEN}●${NC} ${BRIGHT_WHITE}${name}${NC}${assigned_indicator}"
+                # List files already secured for this project in the vault
+                local vault_project_dir="${mount_point}/${project_name}"
+                local secured_line="${DIM}nothing secured yet${NC}"
+                if [ -d "$vault_project_dir" ]; then
+                    local -a secured_files=()
+                    while IFS= read -r f; do
+                        secured_files+=("$(basename "$f")")
+                    done < <(find "$vault_project_dir" -type f 2>/dev/null | sort)
+
+                    local secured_count=${#secured_files[@]}
+                    if [ "$secured_count" -gt 0 ]; then
+                        local preview="${secured_files[0]}"
+                        [ "$secured_count" -ge 2 ] && preview+=", ${secured_files[1]}"
+                        [ "$secured_count" -ge 3 ] && preview+=", ${secured_files[2]}"
+                        [ "$secured_count" -gt 3 ] && preview+=" +$((secured_count - 3)) more"
+                        secured_line="${DIM}secured · ${NC}${BRIGHT_WHITE}${preview}${NC}"
+                    fi
+                fi
+
+                echo -e "  ${BRIGHT_CYAN}${counter}${NC}  ${BRIGHT_GREEN}●${NC} ${BOLD}${BRIGHT_WHITE}${name}${NC}${assigned_indicator}"
                 echo -e "      ${DIM}${mount_point}${NC}"
+                echo -e "      ${secured_line}"
                 mounted_indices+=("$i")
                 counter=$((counter + 1))
             fi

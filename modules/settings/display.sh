@@ -95,6 +95,13 @@ display_workspaces_info() {
     # Populate global array for command routing
     settings_workspaces=("${available_workspaces[@]}")
 
+    # Pre-load vault assignments from ALL workspaces before rendering so that
+    # projects shared across workspaces see each other's vault assignments
+    reset_vault_cache
+    for workspace_basename in "${available_workspaces[@]}"; do
+        load_workspace_vaults "$config_dir/$workspace_basename"
+    done
+
     echo ""
 
     local counter=1
@@ -106,9 +113,6 @@ display_workspaces_info() {
         # Use nameref functions (no subshells)
         format_workspace_display_name_ref "$workspace_file" display_name
         get_workspace_status_ref "$workspace_file" status_icon status_text
-
-        # Load all vaults for this workspace in one jq call
-        load_workspace_vaults "$workspace_file"
 
         # Parse projects from this workspace file
         local workspace_projects=()
@@ -133,7 +137,7 @@ display_workspaces_info() {
                 [[ -z "$shutdown_cmd" || "$shutdown_cmd" == "null" ]] && shutdown_cmd="-"
 
                 # Get vaults from cache (no subshell)
-                get_project_vaults_ref "$workspace_file" "$relative_path" vault_text
+                get_project_vaults_ref "$relative_path" vault_text
                 [[ -z "$vault_text" ]] && vault_text="-"
 
                 # Render row (optimized, no subshells)

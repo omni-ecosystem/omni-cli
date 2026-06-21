@@ -48,6 +48,20 @@ select_vault_screen() {
         return 1
     fi
 
+    # Pre-scan: check if any mounted vault has files for this project.
+    # Determines display mode: filter+both-ops vs show-all+add-only.
+    local has_any_files=false
+    for vault_info in "${vaults[@]}"; do
+        IFS=':' read -r _ _ mount_point _ <<< "$vault_info"
+        if get_vault_status "$mount_point"; then
+            local vpc="${mount_point}/${project_name}"
+            if [ -d "$vpc" ] && [ -n "$(find "$vpc" -type f 2>/dev/null | head -1)" ]; then
+                has_any_files=true
+                break
+            fi
+        fi
+    done
+
     while true; do
         clear
         print_header "SELECT VAULT"
@@ -62,37 +76,33 @@ select_vault_screen() {
             IFS=':' read -r name _ mount_point _ <<< "$vault_info"
 
             if get_vault_status "$mount_point"; then
-                # Check if this vault is assigned to the project
-                local assigned_indicator=""
-                for assigned_vault in "${assigned_vaults[@]}"; do
-                    if [ "$assigned_vault" = "$name" ]; then
-                        assigned_indicator=" ${DIM}(in use)${NC}"
-                        break
-                    fi
-                done
-
-                # List files already secured for this project in the vault
                 local vault_project_dir="${mount_point}/${project_name}"
-                local secured_line="${DIM}nothing secured yet${NC}"
+                local -a secured_files=()
                 if [ -d "$vault_project_dir" ]; then
-                    local -a secured_files=()
                     while IFS= read -r f; do
                         secured_files+=("$(basename "$f")")
                     done < <(find "$vault_project_dir" -type f 2>/dev/null | sort)
-
-                    local secured_count=${#secured_files[@]}
-                    if [ "$secured_count" -gt 0 ]; then
-                        local preview="${secured_files[0]}"
-                        [ "$secured_count" -ge 2 ] && preview+=", ${secured_files[1]}"
-                        [ "$secured_count" -ge 3 ] && preview+=", ${secured_files[2]}"
-                        [ "$secured_count" -gt 3 ] && preview+=" +$((secured_count - 3)) more"
-                        secured_line="${DIM}secured · ${NC}${BRIGHT_WHITE}${preview}${NC}"
-                    fi
                 fi
 
-                echo -e "  ${BRIGHT_CYAN}${counter}${NC}  ${BRIGHT_GREEN}●${NC} ${BOLD}${BRIGHT_WHITE}${name}${NC}${assigned_indicator}"
-                echo -e "      ${DIM}${mount_point}${NC}"
-                echo -e "      ${secured_line}"
+                local secured_count=${#secured_files[@]}
+
+                # If some vault has files: only list vaults that have files
+                [ "$has_any_files" = true ] && [ "$secured_count" -eq 0 ] && continue
+
+                if [ "$secured_count" -gt 0 ]; then
+                    local preview="${secured_files[0]}"
+                    [ "$secured_count" -ge 2 ] && preview+=", ${secured_files[1]}"
+                    [ "$secured_count" -ge 3 ] && preview+=", ${secured_files[2]}"
+                    [ "$secured_count" -gt 3 ] && preview+=" +$((secured_count - 3)) more"
+                    echo -e "  ${BRIGHT_CYAN}${counter}${NC}  ${BRIGHT_GREEN}●${NC} ${BOLD}${BRIGHT_WHITE}${name}${NC}"
+                    echo -e "      ${DIM}${mount_point}${NC}"
+                    echo -e "      ${DIM}secured · ${NC}${BRIGHT_WHITE}${preview}${NC}"
+                else
+                    echo -e "  ${BRIGHT_CYAN}${counter}${NC}  ${BRIGHT_GREEN}●${NC} ${BOLD}${BRIGHT_WHITE}${name}${NC}"
+                    echo -e "      ${DIM}${mount_point}${NC}"
+                    echo -e "      ${DIM}nothing secured yet${NC}"
+                fi
+
                 mounted_indices+=("$i")
                 counter=$((counter + 1))
             fi
@@ -100,11 +110,10 @@ select_vault_screen() {
 
         echo ""
 
-        # Build inline menu based on number of vaults
         local vault_count="${#mounted_indices[@]}"
         menu_line \
             "$(menu_num_cmd 'a' "$vault_count" 'add to vault' "$MENU_COLOR_ADD")" \
-            "$(menu_num_cmd 'm' "$vault_count" 'move from vault' "$MENU_COLOR_ACTION")" \
+            "$( [ "$has_any_files" = true ] && menu_num_cmd 'm' "$vault_count" 'move from vault' "$MENU_COLOR_ACTION")" \
             "$(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")"
         echo ""
         echo -ne "${BRIGHT_CYAN}>${NC} "

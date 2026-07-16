@@ -14,6 +14,44 @@ else
 fi
 export ECOSYSTEM="$HOME/.omni-ecosystem"
 
+# Parse command line arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --localConfig=*)
+                local local_config_path="${1#*=}"
+                if [ -z "$local_config_path" ]; then
+                    echo "Error: --localConfig requires a path (e.g. --localConfig=path/to/config)" >&2
+                    exit 1
+                fi
+                if [ ! -d "$local_config_path" ]; then
+                    echo "Error: config directory not found: $local_config_path" >&2
+                    exit 1
+                fi
+                # Keep the path exactly as typed (relative to where the script was run)
+                OMNI_LOCAL_CONFIG_DIR="$local_config_path"
+                export OMNI_LOCAL_CONFIG_DIR
+                shift
+                ;;
+            --help|-h)
+                echo "Usage: $0 [--localConfig=path/to/config]"
+                echo ""
+                echo "Options:"
+                echo "  --localConfig=<path>  Use <path> as the config directory for this run"
+                echo "                        instead of the global one (path is relative to"
+                echo "                        the directory you run the script from)"
+                echo "  --help, -h            Show this help message"
+                exit 0
+                ;;
+            *)
+                echo "Error: unknown option: $1" >&2
+                echo "Run $0 --help for usage." >&2
+                exit 1
+                ;;
+        esac
+    done
+}
+
 # Load .env early to get project variables
 if [ -f "$BASE_DIR/.env" ]; then
     source "$BASE_DIR/.env"
@@ -32,9 +70,17 @@ setup_config_paths() {
     
     # Set default values if not in .env
     SESSION_NAME="${SESSION_NAME}"
-    
-    # Set JSON_CONFIG_FOLDER based on installation type
-    if [ "$IS_INSTALLED" = true ]; then
+
+    # --localConfig runs always use their own dedicated session
+    if [ -n "$OMNI_LOCAL_CONFIG_DIR" ]; then
+        SESSION_NAME="local-session"
+    fi
+
+    # Set JSON_CONFIG_FOLDER based on override flag or installation type
+    if [ -n "$OMNI_LOCAL_CONFIG_DIR" ]; then
+        # --localConfig flag: use the given directory for this run only
+        JSON_CONFIG_FOLDER="$OMNI_LOCAL_CONFIG_DIR"
+    elif [ "$IS_INSTALLED" = true ]; then
         # Installed: use user cache directory
         JSON_CONFIG_FOLDER="$HOME/.config/$PROJECT_FOLDER_NAME"
         if ! mkdir -p "$JSON_CONFIG_FOLDER" 2>/dev/null; then
@@ -87,6 +133,7 @@ check_ecosystem_deps() {
 }
 
 # Import all modules after setting up paths
+parse_arguments "$@"
 setup_config_paths
 check_ecosystem_deps
 source "$ECOSYSTEM/omni-ui-kit/index.sh"
@@ -95,6 +142,15 @@ source "$BASE_DIR/modules/index.sh"
 main() {
     # Check if already inside a tmux session
     if [ -n "$TMUX" ]; then
+        # --localConfig run from inside another session: create/switch to the
+        # dedicated local session instead of taking over the current pane
+        local current_session
+        current_session=$(tmux display-message -p '#{session_name}')
+        if [ -n "$OMNI_LOCAL_CONFIG_DIR" ] && [ "$current_session" != "$SESSION_NAME" ]; then
+            setup_tmux_session
+            tmux switch-client -t "=$SESSION_NAME"
+            return 0
+        fi
         # Already in tmux - load config and show menu
         load_config
         show_project_menu_tmux
@@ -102,7 +158,7 @@ main() {
         # Not in tmux - create/attach to session
         check_tmux
         setup_tmux_session
-        tmux attach-session -t "$SESSION_NAME"
+        tmux attach-session -t "=$SESSION_NAME"
     fi
 }
 

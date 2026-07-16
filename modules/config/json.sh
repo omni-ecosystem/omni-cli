@@ -15,7 +15,9 @@ declare -g -a project_workspaces=()
 # Returns: config directory path via echo
 # Uses IS_INSTALLED and BASE_DIR variables set in startup.sh
 get_config_directory() {
-    if [ "$IS_INSTALLED" = true ]; then
+    if [ -n "$OMNI_LOCAL_CONFIG_DIR" ]; then
+        echo "$OMNI_LOCAL_CONFIG_DIR"
+    elif [ "$IS_INSTALLED" = true ]; then
         echo "$HOME/.config/$PROJECT_FOLDER_NAME"
     else
         echo "$BASE_DIR/config"

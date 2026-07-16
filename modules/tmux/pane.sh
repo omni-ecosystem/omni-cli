@@ -6,6 +6,13 @@
 # This module handles tmux pane management
 # Usage: source modules/tmux/pane.sh
 
+# Function to get the menu pane id of the current session (pane ids are
+# server-global, so %0 is only the menu pane in the first session ever
+# created on the server - the menu is always window 0, pane index 0)
+get_menu_pane_id() {
+    tmux display-message -p -t "$SESSION_NAME:0.0" '#{pane_id}' 2>/dev/null
+}
+
 # Function to get pane info for a specific project
 get_project_pane() {
     local display_name="$1"
@@ -67,13 +74,13 @@ restart_project() {
 
 # Function to list all project panes
 list_project_panes() {
-    tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}:#{pane_title}" 2>/dev/null | grep -v "^%0:"
+    tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}:#{pane_title}" 2>/dev/null | grep -v "^$(get_menu_pane_id):"
 }
 
 # Function to kill all project panes (except main menu)
 kill_all_projects() {
     local pane_info
-    mapfile -t pane_info < <(tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}:#{pane_title}" 2>/dev/null | grep -v "^%0:")
+    mapfile -t pane_info < <(tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}:#{pane_title}" 2>/dev/null | grep -v "^$(get_menu_pane_id):")
 
     for info in "${pane_info[@]}"; do
         IFS=':' read -r pane_id pane_title <<< "$info"

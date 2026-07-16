@@ -38,9 +38,9 @@ start_project_in_tmux() {
 
     print_info "Starting $display_name in new tmux pane..."
 
-    # Count existing project panes (excluding main menu pane %0)
+    # Count existing project panes (excluding the main menu pane)
     local project_pane_count
-    project_pane_count=$(tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}" 2>/dev/null | grep -v "^%0$" | wc -l)
+    project_pane_count=$(tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}" 2>/dev/null | grep -v "^$(get_menu_pane_id)$" | wc -l)
 
     local new_pane_id
     if [[ "$project_pane_count" -eq 0 ]]; then
@@ -49,7 +49,7 @@ start_project_in_tmux() {
     else
         # Subsequent projects: split horizontally from the last project pane
         local last_project_pane
-        last_project_pane=$(tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}" 2>/dev/null | grep -v "^%0$" | tail -n1)
+        last_project_pane=$(tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}" 2>/dev/null | grep -v "^$(get_menu_pane_id)$" | tail -n1)
         new_pane_id=$(tmux split-window -h -t "$last_project_pane" -c "$project_dir" -P -F "#{pane_id}")
     fi
 

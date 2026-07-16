@@ -3,36 +3,47 @@
 # ========================================
 # Projects Add Module
 # ========================================
-# Handles adding projects to workspaces
+# Handles adding projects and command entries to workspaces
 # Usage: source modules/settings/projects/add.sh
 
-# Function to add a project to a workspace
-# Parameters: workspace_file, projects_root
+# Function to add an entry (project or command) to a workspace
+# Command entries have no project folder - they run in the workspace root.
+# Stored as a project object with empty projectName (the command marker).
+# Parameters: workspace_file, projects_root, entry_type ("project" default, or "command")
 add_project_to_workspace() {
     local workspace_file="$1"
     local projects_root="$2"
+    local entry_type="${3:-project}"
 
     # Set the JSON_CONFIG_FILE for utils functions
     export JSON_CONFIG_FILE="$workspace_file"
     export BACKUP_JSON=false
 
     clear
-    print_header "Add Project to Workspace"
 
-    # Scan and let user select a folder
-    local selected_folder
-    selected_folder=$(scan_and_display_available_folders "$projects_root")
-    local scan_result=$?
+    local selected_folder=""
+    if [ "$entry_type" = "command" ]; then
+        print_header "Add Command to Workspace"
+        echo ""
+        echo -e "${DIM}Runs in: ${projects_root}${NC}"
+        echo ""
+    else
+        print_header "Add Project to Workspace"
 
-    if [ $scan_result -ne 0 ] || [ -z "$selected_folder" ]; then
-        unset JSON_CONFIG_FILE
-        return 1
+        # Scan and let user select a folder
+        selected_folder=$(scan_and_display_available_folders "$projects_root")
+        local scan_result=$?
+
+        if [ $scan_result -ne 0 ] || [ -z "$selected_folder" ]; then
+            unset JSON_CONFIG_FILE
+            return 1
+        fi
+
+        # Show configuration screen
+        show_project_configuration_screen "$selected_folder" "$projects_root"
     fi
 
-    # Show configuration screen
-    show_project_configuration_screen "$selected_folder" "$projects_root"
-
-    # Prompt for project fields
+    # Prompt for entry fields (empty folder name = command entry mode)
     local temp_config_file=$(mktemp)
     prompt_project_input_fields "$selected_folder" > "$temp_config_file"
     local prompt_result=$?
@@ -57,7 +68,7 @@ add_project_to_workspace() {
     show_project_confirmation_screen "$display_name" "$selected_folder" "$startup_cmd" "$shutdown_cmd"
 
     # Confirm
-    if prompt_yes_no_confirmation "Add this project to workspace?"; then
+    if prompt_yes_no_confirmation "Add this ${entry_type} to workspace?"; then
         echo ""
         add_project_to_config "$display_name" "$selected_folder" "$projects_root" "$startup_cmd" "$shutdown_cmd"
     else
@@ -68,4 +79,10 @@ add_project_to_workspace() {
     unset JSON_CONFIG_FILE
     wait_for_enter
     return 0
+}
+
+# Function to add a command entry to a workspace
+# Parameters: workspace_file, projects_root
+add_command_to_workspace() {
+    add_project_to_workspace "$1" "$2" "command"
 }

@@ -132,7 +132,8 @@ display_workspaces_info() {
             for project_info in "${workspace_projects[@]}"; do
                 IFS=':' read -r project_display_name folder_name relative_path startup_cmd shutdown_cmd <<< "$project_info"
 
-                # Use dash for empty values
+                # Use dash for empty values (empty folder = command entry)
+                [[ -z "$folder_name" || "$folder_name" == "null" ]] && folder_name="-"
                 [[ -z "$startup_cmd" || "$startup_cmd" == "null" ]] && startup_cmd="-"
                 [[ -z "$shutdown_cmd" || "$shutdown_cmd" == "null" ]] && shutdown_cmd="-"
 

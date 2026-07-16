@@ -20,8 +20,8 @@ show_project_configuration_screen() {
     echo ""
 }
 
-# Function to show project configuration summary
-# Parameters: display_name, selected_folder, startup_cmd, shutdown_cmd
+# Function to show project/command configuration summary
+# Parameters: display_name, selected_folder (empty = command entry), startup_cmd, shutdown_cmd
 show_project_confirmation_screen() {
     local display_name="$1"
     local selected_folder="$2"
@@ -29,19 +29,27 @@ show_project_confirmation_screen() {
     local shutdown_cmd="$4"
 
     clear
-    print_header "Confirm Project Configuration"
+    if [ -n "$selected_folder" ]; then
+        print_header "Confirm Project Configuration"
+    else
+        print_header "Confirm Command Configuration"
+    fi
     echo ""
     echo -e "  ${DIM}Display Name${NC}"
     echo -e "  ${BRIGHT_WHITE}${display_name}${NC}"
     echo ""
-    echo -e "  ${DIM}Folder${NC}"
-    echo -e "  ${BRIGHT_WHITE}${selected_folder}${NC}"
-    echo ""
-    echo -e "  ${DIM}Startup Command${NC}"
+    if [ -n "$selected_folder" ]; then
+        echo -e "  ${DIM}Folder${NC}"
+        echo -e "  ${BRIGHT_WHITE}${selected_folder}${NC}"
+        echo ""
+        echo -e "  ${DIM}Startup Command${NC}"
+    else
+        echo -e "  ${DIM}Command${NC}"
+    fi
     echo -e "  ${BRIGHT_CYAN}${startup_cmd}${NC}"
     echo ""
     echo -e "  ${DIM}Shutdown Command${NC}"
-    echo -e "  ${BRIGHT_CYAN}${shutdown_cmd}${NC}"
+    echo -e "  ${BRIGHT_CYAN}${shutdown_cmd:-—}${NC}"
     echo ""
 }
 

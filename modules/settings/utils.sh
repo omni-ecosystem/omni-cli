@@ -84,7 +84,8 @@ add_project_to_config() {
     fi
 
     # Create the new project object and append it
-    local relative_path="${projects_root%/}/$folder_name"
+    # Command entries have no folder_name - their path is the projects root itself
+    local relative_path="${projects_root%/}${folder_name:+/$folder_name}"
     local temp_file=$(mktemp)
 
     if jq --arg display_name "$display_name" \

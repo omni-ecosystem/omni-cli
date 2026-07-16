@@ -134,23 +134,31 @@ parse_workspace_projects() {
 }
 
 
-# Function to prompt for all project input fields
-# Parameters: folder_name
+# Function to prompt for all project/command input fields
+# Parameters: folder_name (optional - empty means command entry, no folder)
+#   With folder_name: display name defaults to folder, startup command optional
+#   Without: display name required, command required
 # Outputs to stdout: display_name, startup_cmd, shutdown_cmd (one per line)
 # Returns: 0 on success, 2 if ESC pressed (cancelled)
 # Usage:
 #   IFS=$'\n' read -r display_name startup_cmd shutdown_cmd < <(prompt_project_input_fields "$folder_name")
 prompt_project_input_fields() {
-    local folder_name="$1"
+    local folder_name="${1:-}"
+    local entry_label="project"
+    [ -z "$folder_name" ] && entry_label="command"
     local display_name startup_cmd shutdown_cmd
 
     echo -e "${DIM}(ESC to cancel)${NC}" >&2
     echo "" >&2
 
-    # Get display name (required, loops until valid)
+    # Get display name (required, loops until valid; defaults to folder name if set)
     while true; do
-        echo -e "${BRIGHT_WHITE}Enter display name for this project:${NC}" >&2
-        echo -ne "${DIM}(Enter to use '$folder_name')${NC} ${BRIGHT_CYAN}>${NC} " >&2
+        echo -e "${BRIGHT_WHITE}Enter display name for this ${entry_label}:${NC}" >&2
+        if [ -n "$folder_name" ]; then
+            echo -ne "${DIM}(Enter to use '$folder_name')${NC} ${BRIGHT_CYAN}>${NC} " >&2
+        else
+            echo -ne "${BRIGHT_CYAN}>${NC} " >&2
+        fi
         read_with_esc_cancel display_name
         [[ $? -eq 2 ]] && return 2
 
@@ -169,17 +177,34 @@ prompt_project_input_fields() {
         echo "" >&2
     done
 
-    # Get startup command
-    echo "" >&2
-    echo -e "${BRIGHT_WHITE}Enter startup command:${NC}" >&2
-    echo -ne "${DIM}(e.g., 'npm start', 'yarn dev')${NC} ${BRIGHT_CYAN}>${NC} " >&2
-    read_with_esc_cancel startup_cmd
-    [[ $? -eq 2 ]] && return 2
+    # Get startup command (optional for projects, required for command entries)
+    while true; do
+        echo "" >&2
+        if [ -n "$folder_name" ]; then
+            echo -e "${BRIGHT_WHITE}Enter startup command:${NC}" >&2
+            echo -ne "${DIM}(e.g., 'npm start', 'yarn dev')${NC} ${BRIGHT_CYAN}>${NC} " >&2
+        else
+            echo -e "${BRIGHT_WHITE}Enter command to run:${NC}" >&2
+            echo -ne "${DIM}(e.g., 'docker logs -f api', 'htop')${NC} ${BRIGHT_CYAN}>${NC} " >&2
+        fi
+        read_with_esc_cancel startup_cmd
+        [[ $? -eq 2 ]] && return 2
 
-    # Get shutdown command
+        if [ -n "$startup_cmd" ] || [ -n "$folder_name" ]; then
+            break
+        fi
+
+        echo -e "${RED}Command cannot be empty.${NC}" >&2
+    done
+
+    # Get shutdown command (optional)
     echo "" >&2
     echo -e "${BRIGHT_WHITE}Enter shutdown command:${NC}" >&2
-    echo -ne "${DIM}(e.g., 'npm run stop', 'pkill -f node')${NC} ${BRIGHT_CYAN}>${NC} " >&2
+    if [ -n "$folder_name" ]; then
+        echo -ne "${DIM}(e.g., 'npm run stop', 'pkill -f node')${NC} ${BRIGHT_CYAN}>${NC} " >&2
+    else
+        echo -ne "${DIM}(Enter to skip)${NC} ${BRIGHT_CYAN}>${NC} " >&2
+    fi
     read_with_esc_cancel shutdown_cmd
     [[ $? -eq 2 ]] && return 2
 

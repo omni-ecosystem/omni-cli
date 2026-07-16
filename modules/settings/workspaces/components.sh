@@ -69,7 +69,12 @@ display_projects_list() {
         local counter=1
         for project_info in "${projects_list[@]}"; do
             IFS=':' read -r proj_display proj_name proj_start proj_stop <<< "$project_info"
-            echo -e "  ${BRIGHT_CYAN}${counter}.${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(${proj_name})${NC}"
+            # Command entries have no folder - tag them instead of showing an empty parenthetical
+            if [ -z "$proj_name" ]; then
+                echo -e "  ${BRIGHT_CYAN}${counter}.${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(command)${NC}"
+            else
+                echo -e "  ${BRIGHT_CYAN}${counter}.${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(${proj_name})${NC}"
+            fi
             counter=$((counter + 1))
         done
         echo ""
@@ -87,15 +92,17 @@ show_workspace_management_commands() {
 
     echo ""
     if [[ "$restricted_mode" == true ]]; then
-        # Restricted: only a, v, r, b
+        # Restricted: only a, c, v, r, b
         menu_line \
             "$(menu_cmd 'a' 'add project' "$MENU_COLOR_ADD")" \
+            "$(menu_cmd 'c' 'add command' "$MENU_COLOR_ADD")" \
             "$(menu_num_cmd 'v' "$project_count" 'secure files' "$MENU_COLOR_ACTION")" \
             "$(menu_cmd 'r' 'rename workspace' "$MENU_COLOR_EDIT")" \
             "$(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")"
     else
         menu_line \
             "$(menu_cmd 'a' 'add project' "$MENU_COLOR_ADD")" \
+            "$(menu_cmd 'c' 'add command' "$MENU_COLOR_ADD")" \
             "$(menu_num_cmd 'e' "$project_count" 'edit project' "$MENU_COLOR_EDIT")" \
             "$(menu_num_cmd 'v' "$project_count" 'secure files' "$MENU_COLOR_ACTION")" \
             "$(menu_num_cmd 'x' "$project_count" 'remove project' "$MENU_COLOR_DELETE")" \

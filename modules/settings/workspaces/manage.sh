@@ -57,6 +57,12 @@ manage_workspace() {
             continue
         fi
 
+        # Handle add command entry
+        if [[ $choice =~ ^[Cc]$ ]]; then
+            add_command_to_workspace "$workspace_file" "$projects_root"
+            continue
+        fi
+
         # Handle edit project commands (e1, e2, etc.) - blocked in restricted mode
         if [[ $choice =~ ^[Ee]([0-9]+)$ ]]; then
             if [[ "$restricted_mode" == true ]]; then
@@ -104,6 +110,11 @@ manage_workspace() {
                 local project_index=$((project_choice - 1))
                 local project_info="${workspace_projects[$project_index]}"
                 IFS=':' read -r display_name project_name startup_cmd shutdown_cmd <<< "$project_info"
+                if [ -z "$project_name" ]; then
+                    print_error "Commands have no folder to secure"
+                    sleep 1
+                    continue
+                fi
                 local project_path="${projects_root}/${project_name}"
                 show_secure_files_flow "$workspace_file" "$display_name" "$project_path"
             fi

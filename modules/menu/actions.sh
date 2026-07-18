@@ -30,6 +30,7 @@ with_workspace_context() {
 
 # Function to handle quit command
 handle_quit_command() {
+    echo ""
     show_loading "bye bye!" 1
     tmux kill-session
     exit 0

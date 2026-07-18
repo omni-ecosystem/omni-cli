@@ -43,11 +43,11 @@ toggle_workspace() {
             return 1
         fi
 
-        # Deactivate (no running projects in this workspace)
-        if deactivate_workspace "$workspace_file"; then
-            print_success "Workspace '$display_name' deactivated"
-        else
+        # Deactivate (no running projects in this workspace).
+        # No success message - the status dot in the list shows the result.
+        if ! deactivate_workspace "$workspace_file"; then
             print_error "Failed to deactivate workspace"
+            wait_for_enter
         fi
     else
         # Activate - always allowed
@@ -56,10 +56,10 @@ toggle_workspace() {
             projects_folder=$(dirname "$workspace_file")
         fi
 
-        if activate_workspace "$workspace_file" "$projects_folder"; then
-            print_success "Workspace '$display_name' activated"
-        else
+        # No success message - the status dot in the list shows the result.
+        if ! activate_workspace "$workspace_file" "$projects_folder"; then
             print_error "Failed to activate workspace"
+            wait_for_enter
         fi
     fi
 

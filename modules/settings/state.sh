@@ -94,13 +94,44 @@ get_available_workspaces() {
     return 0
 }
 
+# Per-render snapshot of the active workspace set (basename -> 1). Lets a
+# settings redraw check every workspace's active state with a single jq call
+# instead of one per workspace. Only the render pass uses it; actions that
+# modify .workspaces.json must see live data.
+declare -g -A _active_ws_snapshot=()
+declare -g _active_ws_snapshot_valid=0
+
+# Rebuild the snapshot (one jq call)
+refresh_active_ws_snapshot() {
+    _active_ws_snapshot=()
+    local active_workspaces=()
+    if get_active_workspaces active_workspaces; then
+        local ws
+        for ws in "${active_workspaces[@]}"; do
+            _active_ws_snapshot["$ws"]=1
+        done
+    fi
+    _active_ws_snapshot_valid=1
+}
+
+# Drop the snapshot so subsequent checks hit the file live (call before actions)
+invalidate_active_ws_snapshot() {
+    _active_ws_snapshot_valid=0
+}
+
 # Function to check if a workspace is active
+# Uses the per-render snapshot when valid (no jq call); falls back to a live
+# read otherwise.
 # Parameters: workspace_file_path
 # Returns: 0 if active, 1 if not active or error
 is_workspace_active() {
     local workspace_file="$1"
-    local workspace_basename
-    workspace_basename=$(basename "$workspace_file")
+    local workspace_basename="${workspace_file##*/}"
+
+    if [ "$_active_ws_snapshot_valid" = 1 ]; then
+        [[ -n "${_active_ws_snapshot[$workspace_basename]:-}" ]]
+        return
+    fi
 
     local active_workspaces=()
     if ! get_active_workspaces active_workspaces; then

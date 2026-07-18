@@ -7,8 +7,16 @@
 # Usage: source modules/tmux/project.sh
 
 # Function to check if project is running
+# Uses the per-render pane snapshot when valid (no tmux call); falls back to
+# a live query otherwise.
 is_project_running() {
     local display_name="$1"
+
+    if [ "$_pane_snapshot_valid" = 1 ]; then
+        [[ -n "${_pane_snapshot[$display_name]:-}" ]]
+        return
+    fi
+
     local pane_id
     pane_id=$(get_project_pane "$display_name")
     [[ -n "$pane_id" ]]

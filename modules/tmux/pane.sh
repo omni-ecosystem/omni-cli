@@ -13,6 +13,30 @@ get_menu_pane_id() {
     tmux display-message -p -t "$SESSION_NAME:0.0" '#{pane_id}' 2>/dev/null
 }
 
+# Per-render snapshot of project panes (title -> pane_id), excluding the menu
+# pane. Lets a full menu redraw check every project's status with a single
+# tmux invocation instead of one per project. Only the render pass uses it;
+# action handlers keep querying tmux live.
+declare -g -A _pane_snapshot=()
+declare -g _pane_snapshot_valid=0
+
+# Rebuild the snapshot (one tmux call + one for the menu pane id)
+refresh_pane_snapshot() {
+    _pane_snapshot=()
+    local menu_pane_id pane_id pane_title
+    menu_pane_id=$(get_menu_pane_id)
+    while IFS=':' read -r pane_id pane_title; do
+        [[ "$pane_id" == "$menu_pane_id" ]] && continue
+        _pane_snapshot["$pane_title"]="$pane_id"
+    done < <(tmux list-panes -t "$SESSION_NAME" -F "#{pane_id}:#{pane_title}" 2>/dev/null)
+    _pane_snapshot_valid=1
+}
+
+# Drop the snapshot so subsequent checks hit tmux live (call before actions)
+invalidate_pane_snapshot() {
+    _pane_snapshot_valid=0
+}
+
 # Function to get pane info for a specific project
 get_project_pane() {
     local display_name="$1"

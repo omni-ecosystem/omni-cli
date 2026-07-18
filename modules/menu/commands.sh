@@ -9,7 +9,10 @@
 # Function to handle menu choices
 handle_menu_choice() {
     local choice="$1"
-    
+
+    # Actions must see live tmux state, not the render snapshot
+    invalidate_pane_snapshot
+
     # Handle quit command
     if [[ $choice =~ ^[Qq]$ ]]; then
         handle_quit_command

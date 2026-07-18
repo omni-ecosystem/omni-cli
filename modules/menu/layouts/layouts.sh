@@ -8,10 +8,12 @@ config_dir=$(get_config_directory)
 layouts_dir="$config_dir/layouts"
 mkdir -p "$layouts_dir" 2>/dev/null
 
-while true; do
-    clear
+clear   # once; afterwards frames repaint in place (no blank flash)
 
-    # Get list of layout files
+while true; do
+    printf '\033[?25l'  # Hide cursor during redraw
+
+    # Get list of layout files (in this shell - actions below index into it)
     layout_files=()
     if [ -d "$layouts_dir" ]; then
         while IFS= read -r file; do
@@ -32,53 +34,66 @@ while true; do
         top_lines=$((3 + layout_count + 1))  # empty + header + empty + items + empty
     fi
 
-    # Bottom: menu items + empty + prompt
+    # Bottom: menu items + empty + prompt + reserved rows for the inline
+    # prompts (save name / overwrite # / delete # + confirm). Without the
+    # reserve those prompts spill past the last row and scroll the popup,
+    # pushing the title off-screen.
+    prompt_reserve=3
     if [ "$layout_count" -gt 0 ]; then
-        bottom_lines=7  # load + save + overwrite + delete + back + empty + prompt
+        bottom_lines=$((7 + prompt_reserve))  # load + save + overwrite + delete + back + empty + prompt
     else
-        bottom_lines=4  # save + back + empty + prompt
+        bottom_lines=$((4 + prompt_reserve))  # save + back + empty + prompt
     fi
 
     # Calculate spacer
     spacer=$((term_height - top_lines - bottom_lines))
     [[ $spacer -lt 1 ]] && spacer=1
 
-    # === TOP SECTION: Header + List ===
-    echo ""
-    echo -e " ${BRIGHT_WHITE}Layouts${NC}"
-    echo ""
-
-    if [ "$layout_count" -eq 0 ]; then
-        echo -e " ${DIM}No layouts configured.${NC}"
+    # Build the entire frame off-screen, then paint it in one write
+    frame=$(
+        # === TOP SECTION: Header + List ===
         echo ""
-    else
-        counter=1
-        for layout_file in "${layout_files[@]}"; do
-            layout_name=""
-            if command -v jq >/dev/null 2>&1 && [ -f "$layout_file" ]; then
-                layout_name=$(jq -r '.layoutName // empty' "$layout_file" 2>/dev/null)
-            fi
-
-            if [ -z "$layout_name" ]; then
-                layout_name=$(basename "$layout_file" .json)
-            fi
-
-            echo -e " ${BRIGHT_CYAN}${counter}.${NC} ${BRIGHT_WHITE}${layout_name}${NC}"
-            counter=$((counter + 1))
-        done
+        echo -e " ${BRIGHT_WHITE}Layouts${NC}"
         echo ""
-    fi
 
-    # === SPACER: Push menu to bottom ===
-    for ((i=0; i<spacer; i++)); do echo ""; done
+        if [ "$layout_count" -eq 0 ]; then
+            echo -e " ${DIM}No layouts configured.${NC}"
+            echo ""
+        else
+            counter=1
+            for layout_file in "${layout_files[@]}"; do
+                layout_name=""
+                if command -v jq >/dev/null 2>&1 && [ -f "$layout_file" ]; then
+                    layout_name=$(jq -r '.layoutName // empty' "$layout_file" 2>/dev/null)
+                fi
 
-    # === BOTTOM SECTION: Menu + Input ===
-    [[ $layout_count -gt 0 ]] && echo -e " $(menu_num_cmd '' "$layout_count" 'load layout' "$MENU_COLOR_OPEN")"
-    echo -e " $(menu_cmd 's' 'save layout' "$MENU_COLOR_ADD")"
-    [[ $layout_count -gt 0 ]] && echo -e " $(menu_cmd 'o' 'overwrite layout' "$MENU_COLOR_EDIT")"
-    [[ $layout_count -gt 0 ]] && echo -e " $(menu_cmd 'd' 'delete layout' "$MENU_COLOR_DELETE")"
-    echo -e " $(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")"
+                if [ -z "$layout_name" ]; then
+                    layout_name=$(basename "$layout_file" .json)
+                fi
+
+                echo -e " ${BRIGHT_CYAN}${counter}.${NC} ${BRIGHT_WHITE}${layout_name}${NC}"
+                counter=$((counter + 1))
+            done
+            echo ""
+        fi
+
+        # === SPACER: Push menu toward the bottom (minus prompt reserve) ===
+        for ((i=0; i<spacer; i++)); do echo ""; done
+
+        # === BOTTOM SECTION: Menu ===
+        [[ $layout_count -gt 0 ]] && echo -e " $(menu_num_cmd '' "$layout_count" 'load layout' "$MENU_COLOR_OPEN")"
+        echo -e " $(menu_cmd 's' 'save layout' "$MENU_COLOR_ADD")"
+        [[ $layout_count -gt 0 ]] && echo -e " $(menu_cmd 'o' 'overwrite layout' "$MENU_COLOR_EDIT")"
+        [[ $layout_count -gt 0 ]] && echo -e " $(menu_cmd 'd' 'delete layout' "$MENU_COLOR_DELETE")"
+        echo -e " $(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")"
+    )
+
+    # Home cursor; clear-to-EOL per line kills residue from longer old lines;
+    # clear-below kills residue (incl. previous prompt lines) when frame shrinks.
+    printf '\033[H%s\033[K\n\033[0J' "${frame//$'\n'/$'\033[K\n'}"
+
     echo ""
+    printf '\033[?25h'  # Show cursor for input
     echo -ne " ${BRIGHT_CYAN}>${NC} "
 
     # Read input (with ESC support)

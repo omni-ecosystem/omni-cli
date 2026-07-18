@@ -242,6 +242,30 @@ get_project_status() {
     echo "${status_text}|${status_color}"
 }
 
+# Get project status using namerefs (no subshell) - preferred in render loops
+# Parameters:
+#   $1 - project_display_name
+#   $2 - folder_path
+#   $3 - nameref for status text
+#   $4 - nameref for status color
+get_project_status_ref() {
+    local project_name="$1"
+    local folder_path="$2"
+    local -n _stext=$3
+    local -n _scolor=$4
+
+    if is_project_running "$project_name"; then
+        _stext="running"
+        _scolor="${GREEN}"
+    elif [ -d "$folder_path" ]; then
+        _stext="stopped"
+        _scolor="${DIM}"
+    else
+        _stext="not found"
+        _scolor="${RED}"
+    fi
+}
+
 # Get workspace status using nameref (no subshell)
 # Parameters:
 #   $1 - workspace_file path

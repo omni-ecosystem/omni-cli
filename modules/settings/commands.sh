@@ -11,6 +11,9 @@ handle_settings_choice() {
     local choice="$1"
     local restricted_mode="${2:-false}"
 
+    # Actions must see live workspace state, not the render snapshot
+    invalidate_active_ws_snapshot
+
     # Handle back command
     if [[ $choice =~ ^[Bb]$ ]]; then
         return 1  # Return to previous menu

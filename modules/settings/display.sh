@@ -20,41 +20,56 @@ show_settings_menu() {
         restricted_mode=true
     fi
 
+    clear   # once; afterwards frames repaint in place (no blank flash)
+
     while true; do
         printf '\033[?25l'  # Hide cursor during redraw
-        clear
-        print_header "Settings"
 
-        # Show restricted mode indicator if applicable
-        if [[ "$restricted_mode" == true ]]; then
-            echo -e "${BRIGHT_YELLOW}(Restricted Mode - projects running)${NC}"
-        fi
-
-        # Display workspaces from .workspaces.json (also populates settings_workspaces)
-        display_workspaces_info
-
-        # Build and display menu commands
+        # Populate routing state in the parent shell (frame below renders in a
+        # subshell, so anything set there would be lost)
+        settings_workspaces=()
+        get_available_workspaces settings_workspaces || settings_workspaces=()
         local ws_count=${#settings_workspaces[@]}
 
-        echo ""
-        if [[ "$restricted_mode" == true ]]; then
-            menu_line \
-                "$(menu_num_cmd 't' "$ws_count" 'toggle workspace' "$MENU_COLOR_EDIT")" \
-                "$(menu_num_cmd 'm' "$ws_count" 'manage workspace' "$MENU_COLOR_ADD")" \
-                "$(menu_cmd 'c' 'configure terminal' "$MENU_COLOR_EDIT")" \
-                "$(menu_cmd 's' 'secrets' "$MENU_COLOR_NAV")" \
-                "$(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")" \
-                "$(menu_cmd 'h' 'help' "$MENU_COLOR_NAV")"
-        else
-            menu_line \
-                "$(menu_cmd 'a' 'add workspace' "$MENU_COLOR_ADD")" \
-                "$(menu_num_cmd 'm' "$ws_count" 'manage workspace' "$MENU_COLOR_ADD")" \
-                "$(menu_num_cmd 't' "$ws_count" 'toggle workspace' "$MENU_COLOR_EDIT")" \
-                "$(menu_cmd 'c' 'configure terminal' "$MENU_COLOR_EDIT")" \
-                "$(menu_cmd 's' 'secrets' "$MENU_COLOR_NAV")" \
-                "$(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")" \
-                "$(menu_cmd 'h' 'help' "$MENU_COLOR_NAV")"
-        fi
+        # One jq snapshot of the active set for the whole frame
+        refresh_active_ws_snapshot
+
+        # Build the entire frame off-screen, then paint it in one write
+        local frame
+        frame=$(
+            print_header "Settings"
+
+            if [[ "$restricted_mode" == true ]]; then
+                echo -e "${BRIGHT_YELLOW}(Restricted Mode - projects running)${NC}"
+            fi
+
+            display_workspaces_info
+
+            echo ""
+            if [[ "$restricted_mode" == true ]]; then
+                menu_line \
+                    "$(menu_num_cmd 't' "$ws_count" 'toggle workspace' "$MENU_COLOR_EDIT")" \
+                    "$(menu_num_cmd 'm' "$ws_count" 'manage workspace' "$MENU_COLOR_ADD")" \
+                    "$(menu_cmd 'c' 'configure terminal' "$MENU_COLOR_EDIT")" \
+                    "$(menu_cmd 's' 'secrets' "$MENU_COLOR_NAV")" \
+                    "$(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")" \
+                    "$(menu_cmd 'h' 'help' "$MENU_COLOR_NAV")"
+            else
+                menu_line \
+                    "$(menu_cmd 'a' 'add workspace' "$MENU_COLOR_ADD")" \
+                    "$(menu_num_cmd 'm' "$ws_count" 'manage workspace' "$MENU_COLOR_ADD")" \
+                    "$(menu_num_cmd 't' "$ws_count" 'toggle workspace' "$MENU_COLOR_EDIT")" \
+                    "$(menu_cmd 'c' 'configure terminal' "$MENU_COLOR_EDIT")" \
+                    "$(menu_cmd 's' 'secrets' "$MENU_COLOR_NAV")" \
+                    "$(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")" \
+                    "$(menu_cmd 'h' 'help' "$MENU_COLOR_NAV")"
+            fi
+        )
+
+        # Home cursor; clear-to-EOL per line kills residue from longer old
+        # lines; clear-below kills residue when the frame shrinks.
+        printf '\033[H%s\033[K\n\033[0J' "${frame//$'\n'/$'\033[K\n'}"
+
         echo ""
 
         # Get user input with better prompt
@@ -73,17 +88,13 @@ show_settings_menu() {
     done
 }
 
-# Function to display workspaces information
+# Function to display workspaces information.
+# Renders from the global settings_workspaces array, which the caller
+# (show_settings_menu) populates in the parent shell before frame capture.
 display_workspaces_info() {
     local config_dir=$(get_config_directory)
-    local workspaces_file="$config_dir/.workspaces.json"
 
-    # Reset global workspaces array
-    settings_workspaces=()
-
-    # Get all available workspaces
-    local available_workspaces=()
-    if [ ! -f "$workspaces_file" ] || ! get_available_workspaces available_workspaces || [ ${#available_workspaces[@]} -eq 0 ]; then
+    if [ ${#settings_workspaces[@]} -eq 0 ]; then
         echo ""
         echo -e "${WHITE}No workspaces configured.${NC}"
         echo ""
@@ -92,8 +103,7 @@ display_workspaces_info() {
         return 0
     fi
 
-    # Populate global array for command routing
-    settings_workspaces=("${available_workspaces[@]}")
+    local available_workspaces=("${settings_workspaces[@]}")
 
     # Pre-load vault assignments from ALL workspaces before rendering so that
     # projects shared across workspaces see each other's vault assignments

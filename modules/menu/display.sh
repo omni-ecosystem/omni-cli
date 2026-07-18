@@ -13,34 +13,41 @@ show_project_menu_tmux() {
         show_first_time_welcome
     fi
 
+    clear   # once; afterwards frames repaint in place (no blank flash)
+
     while true; do
         printf '\033[?25l'  # Hide cursor during redraw
-        clear
 
-        # Clean header
-        print_header "Project Manager"
-
-        # Display workspaces
-        display_workspaces
-
-        # Commands section with better formatting and grouping
-        echo ""
+        # One tmux snapshot for the whole frame (project statuses + running check)
+        refresh_pane_snapshot
 
         local n=${#projects[@]}
-        local has_running=$(list_project_panes)
+        local has_running=""
+        [ ${#_pane_snapshot[@]} -gt 0 ] && has_running="yes"
         local layout_cmd=""
         [[ -z "$has_running" ]] && layout_cmd="$(menu_cmd 'l' 'layout' "$MENU_COLOR_OPEN")"
 
-        menu_line \
-            "$(menu_num_cmd '' "$n" 'start' "$MENU_COLOR_ADD")" \
-            "$(menu_num_cmd 'c' "$n" 'terminal' "$MENU_COLOR_OPEN")" \
-            "$(menu_num_cmd 'r' "$n" 'restart' "$MENU_COLOR_ACTION")" \
-            "$(menu_num_cmd 'k' "$n" 'kill' "$MENU_COLOR_DELETE")" \
-            "$([[ $n -gt 1 ]] && menu_cmd 'ka' 'kill all' "$MENU_COLOR_DELETE")" \
-            "$layout_cmd" \
-            "$(menu_cmd 's' 'settings' "$MENU_COLOR_NAV")" \
-            "$(menu_cmd 'h' 'help' "$MENU_COLOR_NAV")" \
-            "$(menu_cmd 'q' 'quit' "$MENU_COLOR_NAV")"
+        # Build the entire frame off-screen, then paint it in one write
+        local frame
+        frame=$(
+            print_header "Project Manager"
+            display_workspaces
+            echo ""
+            menu_line \
+                "$(menu_num_cmd '' "$n" 'start' "$MENU_COLOR_ADD")" \
+                "$(menu_num_cmd 'c' "$n" 'terminal' "$MENU_COLOR_OPEN")" \
+                "$(menu_num_cmd 'r' "$n" 'restart' "$MENU_COLOR_ACTION")" \
+                "$(menu_num_cmd 'k' "$n" 'kill' "$MENU_COLOR_DELETE")" \
+                "$([[ $n -gt 1 ]] && menu_cmd 'ka' 'kill all' "$MENU_COLOR_DELETE")" \
+                "$layout_cmd" \
+                "$(menu_cmd 's' 'settings' "$MENU_COLOR_NAV")" \
+                "$(menu_cmd 'h' 'help' "$MENU_COLOR_NAV")" \
+                "$(menu_cmd 'q' 'quit' "$MENU_COLOR_NAV")"
+        )
+
+        # Home cursor; clear-to-EOL per line kills residue from longer old
+        # lines; clear-below kills residue when the frame shrinks.
+        printf '\033[H%s\033[K\n\033[0J' "${frame//$'\n'/$'\033[K\n'}"
 
         # Get user input with clean prompt
         echo ""
@@ -120,22 +127,19 @@ display_workspaces() {
         if [ ${#workspace_project_indices[@]} -eq 0 ]; then
             echo -e "  ${DIM}No projects configured${NC}"
         else
-            render_table_header "menu"
             for j in "${!workspace_project_indices[@]}"; do
                 local project_index=${workspace_project_indices[j]}
                 IFS=':' read -r project_display_name folder_name startup_cmd shutdown_cmd <<< "${projects[project_index]}"
 
-                # Get status using shared component
-                local status_result=$(get_project_status "$project_display_name" "$folder_name")
-                local status_text="${status_result%%|*}"
-                local status_color="${status_result#*|}"
+                # Get status using shared component (nameref - no subshell)
+                local status_text status_color
+                get_project_status_ref "$project_display_name" "$folder_name" status_text status_color
 
                 # Render row
                 render_menu_project_row "$global_counter" "$project_display_name" "$status_text" "$status_color"
                 global_counter=$((global_counter + 1))
             done
         fi
-        echo ""
     done
 }
 

@@ -65,9 +65,9 @@ handle_menu_choice() {
         return
     fi
 
-    # Handle start commands (1, 2, etc.)
-    if [[ $choice =~ ^[0-9]+$ ]]; then
-        handle_start_command "$choice"
+    # Handle start: one or many ("2", "1,3,5", "1 3 5")
+    if [[ $choice =~ ^[0-9]+([[:space:],]+[0-9]+)*$ ]]; then
+        handle_start_batch "$choice"
         return
     fi
 }

@@ -65,42 +65,69 @@ handle_restart_command() {
     fi
 }
 
-# Function to handle start command with global project array
+# Backwards-compatible entry point: single number is just a one-item batch.
 handle_start_command() {
-    local choice="$1"
-
-    if [ "$choice" -ge 1 ] && [ "$choice" -le "${#projects[@]}" ]; then
-        local project_index=$((choice - 1))
-        IFS=':' read -r display_name folder_name startup_command shutdown_command <<< "${projects[$project_index]}"
-        local workspace_file="${project_workspaces[$project_index]}"
-
-        # Check if project is already running
-        if is_project_running "$display_name"; then
-            echo ""
-            print_warning "$display_name is already running!"
-            print_info "Use 'k$choice' to kill it first, then start again."
-            wait_for_enter
-            return
-        fi
-
-        print_separator
-        echo -e "${BRIGHT_WHITE}Selected project:${NC} ${BRIGHT_GREEN}$display_name${NC}"
-        echo -e "${BRIGHT_WHITE}Project folder:${NC} ${BRIGHT_BLUE}$folder_name${NC}"
-        echo -e "${BRIGHT_WHITE}Startup command:${NC} ${BRIGHT_YELLOW}$startup_command${NC}"
-        echo -e "${BRIGHT_WHITE}Workspace:${NC} ${BRIGHT_CYAN}$(basename "$workspace_file" .json)${NC}"
-        print_separator
-
-        # Start project with workspace context
-        with_workspace_context "$workspace_file" start_project_in_tmux "$display_name" "$folder_name" "$startup_command"
-
-        echo ""
-        wait_for_enter "Press Enter to return to menu..."
-    else
-        print_error "Please enter a number between 1 and ${#projects[@]}"
-        wait_for_enter
-    fi
+    handle_start_batch "$1"
 }
 
+# Starts a project by its 1-based menu number. No prints, no wait.
+# Sets START_RESULT_NAME to the resolved display name (or "#N" when out of range).
+# Returns: 0 started, 1 out-of-range, 2 already running, 3 start failed.
+_start_project_core() {
+    local choice="$1"
+
+    if [ "$choice" -lt 1 ] || [ "$choice" -gt "${#projects[@]}" ]; then
+        START_RESULT_NAME="#$choice"
+        return 1
+    fi
+
+    local i=$((choice - 1))
+    IFS=':' read -r display_name folder_name startup_command shutdown_command <<< "${projects[$i]}"
+    START_RESULT_NAME="$display_name"
+
+    if is_project_running "$display_name"; then
+        return 2
+    fi
+
+    with_workspace_context "${project_workspaces[$i]}" \
+        start_project_in_tmux "$display_name" "$folder_name" "$startup_command" >/dev/null 2>&1 \
+        || return 3
+
+    return 0
+}
+
+# Function to handle batch start ("1, 3, 5" / "1 3 5" / "1,3,5")
+handle_start_batch() {
+    local raw="$1"
+    local -a nums=()
+    local tok n seen
+
+    # Split on comma/space, keep only numbers, dedupe preserving order
+    for tok in ${raw//,/ }; do
+        [[ "$tok" =~ ^[0-9]+$ ]] || continue
+        seen=0
+        for n in "${nums[@]}"; do
+            [[ "$n" == "$tok" ]] && { seen=1; break; }
+        done
+        [[ $seen -eq 0 ]] && nums+=("$tok")
+    done
+
+    [ ${#nums[@]} -eq 0 ] && return
+
+    local summary="${BRIGHT_WHITE}Run:${NC}"
+    for tok in "${nums[@]}"; do
+        _start_project_core "$tok"
+        case $? in
+            0) summary+=" ${BRIGHT_GREEN}✓${START_RESULT_NAME}${NC}" ;;
+            1) summary+=" ${BRIGHT_RED}✗#${tok}${NC}" ;;               # out of range
+            2) summary+=" ${DIM}⊘${START_RESULT_NAME}(running)${NC}" ;;
+            3) summary+=" ${BRIGHT_RED}✗${START_RESULT_NAME}${NC}" ;;  # start failed
+        esac
+    done
+
+    echo -e "\n$summary"
+    sleep 1.5   # glanceable, no keypress; menu loop's clear() then redraws
+}
 
 # Function to handle settings command
 handle_settings_command() {

@@ -15,4 +15,5 @@ source "$PROJECTS_DIR/components.sh"       # UI components
 source "$PROJECTS_DIR/add.sh"              # Add project functionality
 source "$PROJECTS_DIR/remove.sh"           # Remove project functionality
 source "$PROJECTS_DIR/edit.sh"             # Edit project functionality
+source "$PROJECTS_DIR/reorder.sh"          # Reorder project functionality
 source "$PROJECTS_DIR/secure/index.sh"     # Secure files to vault

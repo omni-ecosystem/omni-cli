@@ -76,6 +76,7 @@ show_settings_help() {
     echo -e "  ${BRIGHT_CYAN}a${NC}                  Add a new workspace"
     echo -e "  ${BRIGHT_CYAN}m1-mx${NC}              Manage workspace by number"
     echo -e "  ${BRIGHT_CYAN}t1-tx${NC}              Toggle workspace active/inactive by number"
+    echo -e "  ${BRIGHT_CYAN}r${NC}                  Reorder workspaces (sets main menu order)"
     echo -e "  ${BRIGHT_CYAN}c${NC}                  Configure terminal emulator"
     echo -e "  ${BRIGHT_CYAN}s${NC}                  Open secrets menu (manage vaults)"
     echo -e "  ${BRIGHT_CYAN}b${NC}                  Return to main menu"

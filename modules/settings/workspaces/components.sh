@@ -84,54 +84,6 @@ display_projects_list() {
     fi
 }
 
-# Function to display the projects list in reorder mode
-# The cursor row is highlighted, everything else is dimmed. Once a project is
-# grabbed the cursor row is the project being dragged, so it gets a marker.
-# Parameters: workspace_projects (array by reference), cursor_index (0-based), grabbed
-display_projects_list_reorder() {
-    local -n projects_list=$1
-    local cursor_index="$2"
-    local grabbed="${3:-false}"
-
-    local index=0
-    for project_info in "${projects_list[@]}"; do
-        IFS=':' read -r proj_display proj_name proj_start proj_stop <<< "$project_info"
-
-        # Command entries have no folder - tag them instead of showing an empty parenthetical
-        local proj_tag="${proj_name:-command}"
-
-        if [ "$index" -ne "$cursor_index" ]; then
-            echo -e "    ${DIM}$((index + 1)). ${proj_display} (${proj_tag})${NC}"
-        elif [[ "$grabbed" == true ]]; then
-            echo -e "  ${BRIGHT_YELLOW}▸${NC} ${BRIGHT_CYAN}$((index + 1)).${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(${proj_tag})${NC} ${BRIGHT_YELLOW}← moving${NC}"
-        else
-            echo -e "  ${BRIGHT_CYAN}▸${NC} ${BRIGHT_CYAN}$((index + 1)).${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(${proj_tag})${NC}"
-        fi
-        index=$((index + 1))
-    done
-    echo ""
-}
-
-# Function to show the key hints for reorder mode
-# Parameters: grabbed (false = picking a project, true = moving it)
-show_reorder_mode_commands() {
-    local grabbed="${1:-false}"
-
-    echo ""
-    if [[ "$grabbed" == true ]]; then
-        menu_line \
-            "$(menu_cmd '↑/↓ or w/s' 'move' "$MENU_COLOR_EDIT")" \
-            "$(menu_cmd 'enter' 'drop here' "$MENU_COLOR_ADD")" \
-            "$(menu_cmd 'esc' 'put back' "$MENU_COLOR_NAV")"
-    else
-        menu_line \
-            "$(menu_cmd '↑/↓ or w/s' 'select' "$MENU_COLOR_EDIT")" \
-            "$(menu_cmd 'enter' 'pick project' "$MENU_COLOR_ADD")" \
-            "$(menu_cmd 'esc' 'back' "$MENU_COLOR_NAV")"
-    fi
-    echo ""
-}
-
 # Function to show workspace management menu commands
 # Parameters: project_count, restricted_mode (optional)
 show_workspace_management_commands() {

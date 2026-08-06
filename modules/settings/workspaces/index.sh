@@ -16,4 +16,5 @@ source "$WORKSPACES_DIR/add.sh"            # Add/create workspace functionality
 source "$WORKSPACES_DIR/delete.sh"         # Delete workspace functionality
 source "$WORKSPACES_DIR/rename.sh"         # Rename workspace functionality
 source "$WORKSPACES_DIR/toggle.sh"         # Toggle workspace active/inactive
+source "$WORKSPACES_DIR/reorder.sh"        # Reorder workspaces in the list
 source "$WORKSPACES_DIR/manage.sh"         # Manage workspace (depends on delete, rename)

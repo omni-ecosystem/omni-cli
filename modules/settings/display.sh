@@ -59,6 +59,7 @@ show_settings_menu() {
                     "$(menu_cmd 'a' 'add workspace' "$MENU_COLOR_ADD")" \
                     "$(menu_num_cmd 'm' "$ws_count" 'manage workspace' "$MENU_COLOR_ADD")" \
                     "$(menu_num_cmd 't' "$ws_count" 'toggle workspace' "$MENU_COLOR_EDIT")" \
+                    "$(menu_cmd 'r' 'reorder workspaces' "$MENU_COLOR_EDIT")" \
                     "$(menu_cmd 'c' 'configure terminal' "$MENU_COLOR_EDIT")" \
                     "$(menu_cmd 's' 'secrets' "$MENU_COLOR_NAV")" \
                     "$(menu_cmd 'b' 'back' "$MENU_COLOR_NAV")" \

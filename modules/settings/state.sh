@@ -177,10 +177,16 @@ activate_workspace() {
         projects_folder=$(dirname "$workspace_file")
     fi
 
+    # Append without `unique` - that sorts, which would wipe the user's order.
+    # activeConfig is then re-derived from availableConfigs so both arrays stay
+    # in one order and a toggled-on workspace lands back in its own slot.
     json_update_file "$workspaces_file" \
-        '.activeConfig = (.activeConfig + [$workspace_file] | unique) |
-         .projectsPath = $projects_path |
-         .availableConfigs = (.availableConfigs + [$workspace_file] | unique) |
+        '.projectsPath = $projects_path |
+         .availableConfigs = (if (.availableConfigs | index($workspace_file))
+                              then .availableConfigs
+                              else .availableConfigs + [$workspace_file] end) |
+         .activeConfig = ((.activeConfig + [$workspace_file]) as $active |
+                          .availableConfigs | map(select(. as $w | $active | index($w)))) |
          .workspacePaths = (.workspacePaths // {} | . + {($workspace_file): $projects_path})' \
         --arg workspace_file "$workspace_basename" \
         --arg projects_path "$projects_folder"
@@ -236,8 +242,11 @@ register_workspace() {
 
     local workspaces_file=$(get_workspaces_file_path)
 
+    # Append without `unique` - that sorts, which would wipe the user's order
     json_update_file "$workspaces_file" \
-        '.availableConfigs = (.availableConfigs + [$workspace_file] | unique) |
+        '.availableConfigs = (if (.availableConfigs | index($workspace_file))
+                              then .availableConfigs
+                              else .availableConfigs + [$workspace_file] end) |
          .workspacePaths = (.workspacePaths // {} | . + {($workspace_file): $projects_path})' \
         --arg workspace_file "$workspace_basename" \
         --arg projects_path "$projects_folder"

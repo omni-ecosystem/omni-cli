@@ -77,6 +77,17 @@ handle_settings_choice() {
         return 0
     fi
 
+    # Handle reorder workspaces command - blocked in restricted mode
+    if [[ $choice =~ ^[Rr]$ ]]; then
+        if [[ "$restricted_mode" == true ]]; then
+            print_error "Cannot reorder workspaces while projects are running"
+            sleep 1
+            return 0
+        fi
+        reorder_workspaces
+        return 0
+    fi
+
     # Handle toggle workspace commands (t1, t2, etc.) - allowed with restrictions
     if [[ $choice =~ ^[Tt]([0-9]+)$ ]]; then
         local workspace_choice="${BASH_REMATCH[1]}"

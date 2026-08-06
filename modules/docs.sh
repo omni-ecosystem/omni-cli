@@ -86,7 +86,7 @@ show_settings_help() {
     echo -e "  ${BRIGHT_CYAN}a${NC}                  Add a project to the workspace"
     echo -e "  ${BRIGHT_CYAN}c${NC}                  Add a command entry to the workspace"
     echo -e "  ${BRIGHT_CYAN}e1-ex${NC}              Edit project by number"
-    echo -e "  ${BRIGHT_CYAN}m1-mx${NC}              Move project up/down in the list"
+    echo -e "  ${BRIGHT_CYAN}m${NC}                  Reorder projects (pick one, then move it)"
     echo -e "  ${BRIGHT_CYAN}v1-vx${NC}              Manage secure files (vault assignments)"
     echo -e "  ${BRIGHT_CYAN}x1-xx${NC}              Remove project by number"
     echo -e "  ${BRIGHT_CYAN}r${NC}                  Rename the workspace"

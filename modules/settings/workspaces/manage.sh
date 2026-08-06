@@ -78,18 +78,14 @@ manage_workspace() {
             continue
         fi
 
-        # Handle move project commands (m1, m2, etc.) - blocked in restricted mode
-        if [[ $choice =~ ^[Mm]([0-9]+)$ ]]; then
+        # Handle reorder projects command - blocked in restricted mode
+        if [[ $choice =~ ^[Mm]$ ]]; then
             if [[ "$restricted_mode" == true ]]; then
                 print_error "Cannot reorder projects while projects are running"
                 sleep 1
                 continue
             fi
-            local project_choice="${BASH_REMATCH[1]}"
-            if [ "$project_choice" -ge 1 ] && [ "$project_choice" -le "$project_count" ]; then
-                local project_index=$((project_choice - 1))
-                reorder_project_in_workspace "$workspace_file" "$project_index"
-            fi
+            reorder_workspace_projects "$workspace_file"
             continue
         fi
 

@@ -84,12 +84,14 @@ display_projects_list() {
     fi
 }
 
-# Function to display the projects list while a project is being moved
-# The moving entry is highlighted, everything else is dimmed
-# Parameters: workspace_projects (array passed by reference), highlight_index (0-based)
+# Function to display the projects list in reorder mode
+# The cursor row is highlighted, everything else is dimmed. Once a project is
+# grabbed the cursor row is the project being dragged, so it gets a marker.
+# Parameters: workspace_projects (array by reference), cursor_index (0-based), grabbed
 display_projects_list_reorder() {
     local -n projects_list=$1
-    local highlight_index="$2"
+    local cursor_index="$2"
+    local grabbed="${3:-false}"
 
     local index=0
     for project_info in "${projects_list[@]}"; do
@@ -98,10 +100,12 @@ display_projects_list_reorder() {
         # Command entries have no folder - tag them instead of showing an empty parenthetical
         local proj_tag="${proj_name:-command}"
 
-        if [ "$index" -eq "$highlight_index" ]; then
-            echo -e "  ${BRIGHT_CYAN}$((index + 1)).${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(${proj_tag})${NC} ${BRIGHT_YELLOW}← moving${NC}"
+        if [ "$index" -ne "$cursor_index" ]; then
+            echo -e "    ${DIM}$((index + 1)). ${proj_display} (${proj_tag})${NC}"
+        elif [[ "$grabbed" == true ]]; then
+            echo -e "  ${BRIGHT_YELLOW}▸${NC} ${BRIGHT_CYAN}$((index + 1)).${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(${proj_tag})${NC} ${BRIGHT_YELLOW}← moving${NC}"
         else
-            echo -e "  ${DIM}$((index + 1)). ${proj_display} (${proj_tag})${NC}"
+            echo -e "  ${BRIGHT_CYAN}▸${NC} ${BRIGHT_CYAN}$((index + 1)).${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(${proj_tag})${NC}"
         fi
         index=$((index + 1))
     done
@@ -109,12 +113,22 @@ display_projects_list_reorder() {
 }
 
 # Function to show the key hints for reorder mode
+# Parameters: grabbed (false = picking a project, true = moving it)
 show_reorder_mode_commands() {
+    local grabbed="${1:-false}"
+
     echo ""
-    menu_line \
-        "$(menu_cmd '↑/↓ or w/s' 'move' "$MENU_COLOR_EDIT")" \
-        "$(menu_cmd 'enter' 'confirm' "$MENU_COLOR_ADD")" \
-        "$(menu_cmd 'esc' 'cancel' "$MENU_COLOR_NAV")"
+    if [[ "$grabbed" == true ]]; then
+        menu_line \
+            "$(menu_cmd '↑/↓ or w/s' 'move' "$MENU_COLOR_EDIT")" \
+            "$(menu_cmd 'enter' 'drop here' "$MENU_COLOR_ADD")" \
+            "$(menu_cmd 'esc' 'put back' "$MENU_COLOR_NAV")"
+    else
+        menu_line \
+            "$(menu_cmd '↑/↓ or w/s' 'select' "$MENU_COLOR_EDIT")" \
+            "$(menu_cmd 'enter' 'pick project' "$MENU_COLOR_ADD")" \
+            "$(menu_cmd 'esc' 'back' "$MENU_COLOR_NAV")"
+    fi
     echo ""
 }
 
@@ -138,7 +152,7 @@ show_workspace_management_commands() {
             "$(menu_cmd 'a' 'add project' "$MENU_COLOR_ADD")" \
             "$(menu_cmd 'c' 'add command' "$MENU_COLOR_ADD")" \
             "$(menu_num_cmd 'e' "$project_count" 'edit project' "$MENU_COLOR_EDIT")" \
-            "$(menu_num_cmd 'm' "$project_count" 'move project' "$MENU_COLOR_EDIT")" \
+            "$(menu_cmd 'm' 'reorder projects' "$MENU_COLOR_EDIT")" \
             "$(menu_num_cmd 'v' "$project_count" 'secure files' "$MENU_COLOR_ACTION")" \
             "$(menu_num_cmd 'x' "$project_count" 'remove project' "$MENU_COLOR_DELETE")" \
             "$(menu_cmd 'r' 'rename workspace' "$MENU_COLOR_EDIT")" \

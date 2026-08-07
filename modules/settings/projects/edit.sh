@@ -20,7 +20,7 @@ edit_project_in_workspace() {
     local workspace_projects=()
     parse_workspace_projects "$workspace_file" workspace_projects
     local selected_project="${workspace_projects[selected_index]}"
-    IFS=':' read -r current_display current_name current_start current_stop <<< "$selected_project"
+    IFS="$OMNI_FIELD_SEP" read -r current_display current_name current_start current_stop <<< "$selected_project"
 
     # Show edit screen
     show_edit_project_screen "$current_display" "$current_start" "$current_stop"

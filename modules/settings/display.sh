@@ -130,7 +130,7 @@ display_workspaces_info() {
         if command -v jq >/dev/null 2>&1 && [ -f "$workspace_file" ]; then
             while IFS= read -r line; do
                 workspace_projects+=("$line")
-            done < <(jq -r '.[] | "\(.displayName):\(.projectName):\(.relativePath):\(.startupCmd // ""):\(.shutdownCmd // "")"' "$workspace_file" 2>/dev/null)
+            done < <(jq -r --arg sep "$OMNI_FIELD_SEP" '.[] | [(.displayName // ""), (.projectName // ""), (.relativePath // ""), (.startupCmd // ""), (.shutdownCmd // "")] | join($sep)' "$workspace_file" 2>/dev/null)
         fi
 
         render_workspace_header "settings" "$display_name" "$counter" "$status_icon" "$status_text"
@@ -141,7 +141,7 @@ display_workspaces_info() {
         else
             render_table_header "settings"
             for project_info in "${workspace_projects[@]}"; do
-                IFS=':' read -r project_display_name folder_name relative_path startup_cmd shutdown_cmd <<< "$project_info"
+                IFS="$OMNI_FIELD_SEP" read -r project_display_name folder_name relative_path startup_cmd shutdown_cmd <<< "$project_info"
 
                 # Use dash for empty values (empty folder = command entry)
                 [[ -z "$folder_name" || "$folder_name" == "null" ]] && folder_name="-"

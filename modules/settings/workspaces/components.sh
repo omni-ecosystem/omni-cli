@@ -68,7 +68,7 @@ display_projects_list() {
     if [ $project_count -gt 0 ]; then
         local counter=1
         for project_info in "${projects_list[@]}"; do
-            IFS=':' read -r proj_display proj_name proj_start proj_stop <<< "$project_info"
+            IFS="$OMNI_FIELD_SEP" read -r proj_display proj_name proj_start proj_stop <<< "$project_info"
             # Command entries have no folder - tag them instead of showing an empty parenthetical
             if [ -z "$proj_name" ]; then
                 echo -e "  ${BRIGHT_CYAN}${counter}.${NC} ${BRIGHT_WHITE}${proj_display}${NC} ${DIM}(command)${NC}"

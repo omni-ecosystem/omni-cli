@@ -228,7 +228,7 @@ select_project_from_workspace() {
 
     local counter=1
     for project_info in "${workspace_projects[@]}"; do
-        IFS=':' read -r proj_display proj_name proj_start proj_stop <<< "$project_info"
+        IFS="$OMNI_FIELD_SEP" read -r proj_display proj_name proj_start proj_stop <<< "$project_info"
         echo -e "  ${BRIGHT_CYAN}${counter}${NC} ${BRIGHT_WHITE}${proj_display}${NC}" >&2
         counter=$((counter + 1))
     done

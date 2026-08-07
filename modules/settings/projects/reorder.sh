@@ -22,7 +22,7 @@ reorder_workspace_projects() {
     local labels=()
     local entry
     for entry in "${entries[@]}"; do
-        IFS=':' read -r proj_display proj_name proj_start proj_stop <<< "$entry"
+        IFS="$OMNI_FIELD_SEP" read -r proj_display proj_name proj_start proj_stop <<< "$entry"
         # Command entries have no folder - tag them instead of an empty parenthetical
         labels+=("${proj_display} (${proj_name:-command})")
     done

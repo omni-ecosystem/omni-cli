@@ -120,7 +120,7 @@ manage_workspace() {
             if [ "$project_choice" -ge 1 ] && [ "$project_choice" -le "$project_count" ]; then
                 local project_index=$((project_choice - 1))
                 local project_info="${workspace_projects[$project_index]}"
-                IFS=':' read -r display_name project_name startup_cmd shutdown_cmd <<< "$project_info"
+                IFS="$OMNI_FIELD_SEP" read -r display_name project_name startup_cmd shutdown_cmd <<< "$project_info"
                 if [ -z "$project_name" ]; then
                     print_error "Commands have no folder to secure"
                     sleep 1

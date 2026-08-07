@@ -43,7 +43,7 @@ handle_kill_command() {
 
     if [ "$kill_choice" -ge 1 ] && [ "$kill_choice" -le "${#projects[@]}" ]; then
         local project_index=$((kill_choice - 1))
-        IFS=':' read -r display_name folder_name startup_command shutdown_command <<< "${projects[$project_index]}"
+        IFS="$OMNI_FIELD_SEP" read -r display_name folder_name startup_command shutdown_command <<< "${projects[$project_index]}"
         local workspace_file="${project_workspaces[$project_index]}"
 
         if is_project_running "$display_name"; then
@@ -58,7 +58,7 @@ handle_restart_command() {
 
     if [ "$restart_choice" -ge 1 ] && [ "$restart_choice" -le "${#projects[@]}" ]; then
         local project_index=$((restart_choice - 1))
-        IFS=':' read -r display_name folder_name startup_command shutdown_command <<< "${projects[$project_index]}"
+        IFS="$OMNI_FIELD_SEP" read -r display_name folder_name startup_command shutdown_command <<< "${projects[$project_index]}"
 
         if is_project_running "$display_name"; then
             restart_project "$display_name" "$startup_command" "$shutdown_command"
@@ -83,7 +83,7 @@ _start_project_core() {
     fi
 
     local i=$((choice - 1))
-    IFS=':' read -r display_name folder_name startup_command shutdown_command <<< "${projects[$i]}"
+    IFS="$OMNI_FIELD_SEP" read -r display_name folder_name startup_command shutdown_command <<< "${projects[$i]}"
     START_RESULT_NAME="$display_name"
 
     if is_project_running "$display_name"; then
@@ -171,7 +171,7 @@ handle_custom_command() {
 
     if [ "$choice" -ge 1 ] && [ "$choice" -le "${#projects[@]}" ]; then
         local project_index=$((choice - 1))
-        IFS=':' read -r display_name folder_name startup_command shutdown_command <<< "${projects[$project_index]}"
+        IFS="$OMNI_FIELD_SEP" read -r display_name folder_name startup_command shutdown_command <<< "${projects[$project_index]}"
 
         # Check if folder exists
         if [ ! -d "$folder_name" ]; then

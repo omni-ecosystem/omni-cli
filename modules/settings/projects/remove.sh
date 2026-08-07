@@ -20,7 +20,7 @@ remove_project_from_workspace() {
     local workspace_projects=()
     parse_workspace_projects "$workspace_file" workspace_projects
     local selected_project="${workspace_projects[selected_index]}"
-    IFS=':' read -r proj_display proj_name proj_start proj_stop <<< "$selected_project"
+    IFS="$OMNI_FIELD_SEP" read -r proj_display proj_name proj_start proj_stop <<< "$selected_project"
 
     clear
     print_header "Remove Project"

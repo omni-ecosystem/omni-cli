@@ -6,6 +6,11 @@
 # This module handles JSON parsing functionality
 # Usage: source modules/config/json.sh
 
+# Field separator used to pack a project record into a single string.
+# ASCII Unit Separator: commands legitimately contain ':' (ports, URLs, ssh
+# targets), so a colon here truncates them when the record is split back apart.
+declare -g OMNI_FIELD_SEP=$'\x1f'
+
 # Global projects array
 declare -g -a projects=()
 # Global workspace tracking array (parallel to projects array)
@@ -72,68 +77,39 @@ load_projects_from_workspace() {
         return 1
     fi
 
-    # Read each project object from JSON - use safer approach
-    local json_content
-    json_content=$(cat "$json_file" 2>/dev/null)
-    if [ $? -ne 0 ] || [ -z "$json_content" ]; then
+    if ! command -v jq >/dev/null 2>&1; then
         return 1
     fi
 
-    # Remove newlines and split on project boundaries
-    local flat_json
-    flat_json=$(echo "$json_content" | tr -d '\n\r' | sed 's/},/},\n/g')
+    # Read each project object with jq - regex parsing mangles commands that
+    # contain escaped double quotes or braces. One field per line, fed straight
+    # into the loop: a command substitution would swallow a trailing empty
+    # shutdown command and drop the last entry of the file.
+    local loaded=0
+    local display_name folder_path startup_cmd shutdown_cmd
+    while IFS= read -r display_name \
+       && IFS= read -r folder_path \
+       && IFS= read -r startup_cmd \
+       && IFS= read -r shutdown_cmd; do
+        # Only a display name is required - startup and shutdown commands are
+        # both optional, and command entries have no project folder
+        [ -z "$display_name" ] && continue
 
-    # Extract JSON objects - use more robust method
-    local parsed_objects
-    parsed_objects=$(echo "$flat_json" | grep -o '{[^}]*}' || true)
+        projects+=("${display_name}${OMNI_FIELD_SEP}${folder_path}${OMNI_FIELD_SEP}${startup_cmd}${OMNI_FIELD_SEP}${shutdown_cmd}")
+        project_workspaces+=("$json_file")
+        loaded=$((loaded + 1))
+    done < <(jq -r '
+        .[]?
+        | select((.displayName // "") != "")
+        | .displayName,
+          (if (.relativePath // "") != "" then .relativePath
+           elif (.projectName // "") != "" then .projectName
+           else (.folderPath // "") end),
+          (.startupCmd // ""),
+          (.shutdownCmd // "")
+    ' "$json_file" 2>/dev/null)
 
-    if [ -z "$parsed_objects" ]; then
-        return 1
-    fi
-
-    # Process each JSON object
-    while IFS= read -r line; do
-        # Skip empty lines
-        [ -z "$line" ] && continue
-
-        # Skip lines that don't contain project objects
-        if [[ ! "$line" =~ \"displayName\" ]]; then
-            continue
-        fi
-
-        # Extract values using more robust regex patterns
-        local display_name
-        local project_name
-        local relative_path
-        local startup_cmd
-        local shutdown_cmd
-
-        display_name=$(echo "$line" | sed -n 's/.*"displayName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-        project_name=$(echo "$line" | sed -n 's/.*"projectName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-        relative_path=$(echo "$line" | sed -n 's/.*"relativePath"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-        startup_cmd=$(echo "$line" | sed -n 's/.*"startupCmd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-        shutdown_cmd=$(echo "$line" | sed -n 's/.*"shutdownCmd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-
-        # If no shutdown command, use empty string
-        [ -z "$shutdown_cmd" ] && shutdown_cmd=""
-
-        # Determine the folder path - prefer relativePath, fallback to projectName
-        local folder_path
-        if [ -n "$relative_path" ]; then
-            folder_path="$relative_path"
-        elif [ -n "$project_name" ]; then
-            folder_path="$project_name"
-        else
-            continue  # Skip if neither field is available
-        fi
-
-        # Add to global projects array (startup_cmd can be empty)
-        if [ -n "$display_name" ] && [ -n "$folder_path" ]; then
-            projects+=("$display_name:$folder_path:$startup_cmd:$shutdown_cmd")
-            project_workspaces+=("$json_file")
-        fi
-    done <<< "$parsed_objects"
-
+    [ "$loaded" -eq 0 ] && return 1
     return 0
 }
 

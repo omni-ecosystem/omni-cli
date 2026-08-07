@@ -112,7 +112,7 @@ kill_all_projects() {
         # Find the shutdown command for this project
         local shutdown_cmd=""
         for i in "${!projects[@]}"; do
-            IFS=':' read -r display_name folder_name startup_cmd project_shutdown_cmd <<< "${projects[i]}"
+            IFS="$OMNI_FIELD_SEP" read -r display_name folder_name startup_cmd project_shutdown_cmd <<< "${projects[i]}"
             if [[ "$display_name" == "$pane_title" ]]; then
                 shutdown_cmd="$project_shutdown_cmd"
                 break

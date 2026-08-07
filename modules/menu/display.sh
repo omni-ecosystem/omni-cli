@@ -129,7 +129,7 @@ display_workspaces() {
         else
             for j in "${!workspace_project_indices[@]}"; do
                 local project_index=${workspace_project_indices[j]}
-                IFS=':' read -r project_display_name folder_name startup_cmd shutdown_cmd <<< "${projects[project_index]}"
+                IFS="$OMNI_FIELD_SEP" read -r project_display_name folder_name startup_cmd shutdown_cmd <<< "${projects[project_index]}"
 
                 # Get status using shared component (nameref - no subshell)
                 local status_text status_color

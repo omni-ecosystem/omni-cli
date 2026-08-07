@@ -62,10 +62,16 @@ scan_and_display_available_folders() {
     folder_choice=""
     while true; do
         IFS= read -r -s -n 1 char
-        # ESC key
+        # ESC key - a bare Esc goes back, arrow keys arrive as Esc-prefixed
+        # sequences and are ignored
         if [[ "$char" == $'\x1b' ]]; then
-            # Consume any escape sequence chars
-            read -r -s -n 2 -t 0.01 _ 2>/dev/null || true
+            local esc_intro=""
+            read -r -s -n 1 -t 0.01 esc_intro
+            if [[ -n "$esc_intro" ]]; then
+                # Drain the rest of the sequence, then keep waiting for input
+                read -r -s -n 2 -t 0.01 _ 2>/dev/null || true
+                continue
+            fi
             echo "" >&2
             return 1
         fi
@@ -129,7 +135,7 @@ parse_workspace_projects() {
     if command -v jq >/dev/null 2>&1 && [ -f "$workspace_file" ]; then
         while IFS= read -r line; do
             result_array+=("$line")
-        done < <(jq -r '.[] | "\(.displayName):\(.projectName):\(.startupCmd):\(.shutdownCmd)"' "$workspace_file" 2>/dev/null)
+        done < <(jq -r --arg sep "$OMNI_FIELD_SEP" '.[] | [(.displayName // ""), (.projectName // ""), (.startupCmd // ""), (.shutdownCmd // "")] | join($sep)' "$workspace_file" 2>/dev/null)
     fi
 }
 
